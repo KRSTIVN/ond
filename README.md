@@ -24,7 +24,7 @@
 
 > **Built for my own daily workflow — open to anyone who wants it.**
 
-This project was shaped around how I actually use **Notion** every day, minus the bloat and rigid layout ceilings. Spreadsheets (**Google Sheets** & **Excel**) are unbeatable for capturing and owning raw data, while a great Kanban board is unbeatable for executing on it.
+This project was shaped around how I actually use **Notion** every day, minus the bloat and rigid layout ceilings. Spreadsheets (**Google Sheets** & **Excel**) are unbeatable for capturing and owning raw data — especially when your AI agent is automatically researching, enriching, and filling your sheets in the background — while a great Kanban board keeps you in full control of human interaction and high-touch decisions where it matters most.
 
 Because I build my own tools, I didn't have to settle for off-the-shelf UI: **OND** pushes past standard board templates with full-bleed atmospheric wallpapers, real-time glassmorphism optics, zero-latency drag-and-drop, and direct spreadsheet write-back — all running locally with **zero backend, zero accounts, and zero lock-in**.
 
