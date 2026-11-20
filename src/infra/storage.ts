@@ -1,6 +1,7 @@
 import { DEFAULT_KANBAN_COLUMNS, makeShortLabel } from '../domain/columns';
 import {
   isEventCategory,
+  isUiThemeId,
   normalizeLeadType,
   sanitizeHttpUrl,
   type BoardPreferences,
@@ -29,6 +30,8 @@ const MAX_CALC_HISTORY = 50;
 export const DEFAULT_PREFERENCES: BoardPreferences = {
   boardTitle: 'OND',
   googleSheetUrl: '',
+  uiTheme: 'liquid-glass',
+  defaultTab: 'kanban',
   wallpaperId: 'coastal-twilight',
   customWallpaperUrl: '',
   hasCustomUpload: false,
@@ -297,6 +300,8 @@ export function loadPreferences(): BoardPreferences {
         typeof parsed.googleSheetUrl === 'string'
           ? (sanitizeHttpUrl(parsed.googleSheetUrl) ?? '')
           : '',
+      uiTheme: isUiThemeId(parsed.uiTheme) ? parsed.uiTheme : DEFAULT_PREFERENCES.uiTheme,
+      defaultTab: parsed.defaultTab === 'dashboard' ? 'dashboard' : 'kanban',
       wallpaperId:
         typeof parsed.wallpaperId === 'string'
           ? normalizeWallpaperId(parsed.wallpaperId)

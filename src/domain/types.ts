@@ -1,4 +1,15 @@
-export type WorkspaceTab = 'kanban' | 'calendar' | 'notes' | 'calculator';
+export type WorkspaceTab = 'dashboard' | 'kanban' | 'calendar' | 'notes' | 'calculator';
+
+export type UiThemeId = 'liquid-glass' | 'vision-spatial' | 'obsidian-minimal' | 'aurora-prism';
+
+export interface UiThemePreset {
+  readonly id: UiThemeId;
+  readonly name: string;
+  readonly tag: string;
+  readonly description: string;
+  readonly previewGradient: string;
+  readonly accentBorder: string;
+}
 
 export type AngleUnit = 'deg' | 'rad';
 
@@ -87,6 +98,8 @@ export type WallpaperPreset =
 export interface BoardPreferences {
   boardTitle: string;
   googleSheetUrl: string;
+  uiTheme: UiThemeId;
+  defaultTab: 'kanban' | 'dashboard';
   wallpaperId: string;
   customWallpaperUrl: string;
   hasCustomUpload: boolean;
@@ -113,8 +126,19 @@ const VALID_EVENT_CATEGORIES: ReadonlySet<string> = new Set<EventCategory>([
   'deadline',
 ]);
 
+const VALID_UI_THEMES: ReadonlySet<string> = new Set<UiThemeId>([
+  'liquid-glass',
+  'vision-spatial',
+  'obsidian-minimal',
+  'aurora-prism',
+]);
+
 export function isEventCategory(value: unknown): value is EventCategory {
   return typeof value === 'string' && VALID_EVENT_CATEGORIES.has(value);
+}
+
+export function isUiThemeId(value: unknown): value is UiThemeId {
+  return typeof value === 'string' && VALID_UI_THEMES.has(value);
 }
 
 export function normalizeLeadType(raw: string): LeadType {

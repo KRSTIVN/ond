@@ -6,7 +6,8 @@ import {
   ExternalLink,
   FileSpreadsheet,
   FileText,
-  Image as ImageIcon,
+  LayoutDashboard,
+  Palette,
   Plus,
   RefreshCw,
   Save,
@@ -46,6 +47,7 @@ const WORKSPACE_TABS: readonly {
   readonly label: string;
   readonly icon: typeof Columns3;
 }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'kanban', label: 'Kanban', icon: Columns3 },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'notes', label: 'Notes', icon: FileText },
@@ -111,7 +113,7 @@ export function TopBar({
             )}
           </div>
           <div className="brand-stats">
-            {activeTab === 'kanban' && (
+            {(activeTab === 'kanban' || activeTab === 'dashboard') && (
               <>
                 <span>{totalCount} cards</span>
                 <span className="stat-dot" aria-hidden="true">•</span>
@@ -189,15 +191,15 @@ export function TopBar({
           type="button"
           className="btn-glass"
           onClick={onOpenWallpapers}
-          title="Change board wallpaper and glass blur"
+          title="Switch UI theme variations, wallpapers, and glass blur"
         >
           <span
             className="wallpaper-mini-swatch"
             style={{ background: activeWallpaperThumb }}
             aria-hidden="true"
           />
-          <ImageIcon size={15} />
-          <span>Wallpapers</span>
+          <Palette size={15} />
+          <span>Themes</span>
         </button>
 
         <button
@@ -210,7 +212,7 @@ export function TopBar({
           <span>Sync &amp; Backup</span>
         </button>
 
-        {activeTab === 'kanban' && (
+        {(activeTab === 'kanban' || activeTab === 'dashboard') && (
           <button type="button" className="btn-primary" onClick={onOpenNewLead}>
             <Plus size={16} />
             <span>Add Card</span>

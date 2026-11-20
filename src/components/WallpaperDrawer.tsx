@@ -4,15 +4,21 @@ import {
   ImagePlus,
   Link2,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
+import { UI_THEME_PRESETS } from '../domain/themes';
+import {
+  sanitizeHttpUrl,
+  type BoardPreferences,
+  type UiThemeId,
+} from '../domain/types';
 import {
   CUSTOM_UPLOAD_WALLPAPER_ID,
   CUSTOM_URL_WALLPAPER_ID,
   WALLPAPER_PRESETS,
 } from '../domain/wallpapers';
-import { sanitizeHttpUrl, type BoardPreferences } from '../domain/types';
 import { useDialogModal } from '../hooks/useDialogModal';
 
 interface WallpaperDrawerProps {
@@ -20,6 +26,8 @@ interface WallpaperDrawerProps {
   readonly preferences: BoardPreferences;
   readonly customUploadDataUrl: string | null;
   readonly onClose: () => void;
+  readonly onSelectUiTheme: (themeId: UiThemeId) => void;
+  readonly onSelectDefaultTab: (tab: 'kanban' | 'dashboard') => void;
   readonly onSelectPreset: (wallpaperId: string) => void;
   readonly onUploadWallpaper: (file: File) => Promise<void>;
   readonly onClearCustomUpload: () => Promise<void>;
@@ -32,6 +40,8 @@ export function WallpaperDrawer({
   preferences,
   customUploadDataUrl,
   onClose,
+  onSelectUiTheme,
+  onSelectDefaultTab,
   onSelectPreset,
   onUploadWallpaper,
   onClearCustomUpload,
@@ -94,23 +104,82 @@ export function WallpaperDrawer({
       <div className="modal-header">
         <div>
           <h2 id={titleId} className="modal-title">
-            Board Wallpapers
+            Themes &amp; Wallpapers
           </h2>
           <p className="modal-subtitle">
-            Switch backdrops, upload your own photo, or tune glass contrast.
+            Switch UI style variations, startup view, backdrops, and glass optics.
           </p>
         </div>
         <button
           type="button"
           className="modal-close-btn"
           onClick={onClose}
-          aria-label="Close wallpaper studio"
+          aria-label="Close appearance studio"
         >
           <X size={18} />
         </button>
       </div>
 
       <div className="modal-body scroller">
+        <section className="drawer-section">
+          <h3 className="drawer-section-title">
+            <Sparkles size={13} />
+            <span>UI Style Variations</span>
+          </h3>
+
+          <div className="ui-theme-grid">
+            {UI_THEME_PRESETS.map((theme) => {
+              const active = preferences.uiTheme === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  className={`ui-theme-tile ${active ? 'is-active' : ''}`}
+                  onClick={() => onSelectUiTheme(theme.id)}
+                >
+                  <span
+                    className="ui-theme-swatch"
+                    style={{
+                      background: theme.previewGradient,
+                      borderColor: theme.accentBorder,
+                    }}
+                  >
+                    <span className="ui-theme-demo-pill" />
+                    <span className="wallpaper-tag">{theme.tag}</span>
+                    {active && (
+                      <span className="wallpaper-check" aria-hidden="true">
+                        <Check size={13} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="wallpaper-name">{theme.name}</span>
+                  <span className="ui-theme-desc">{theme.description}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="startup-view-row">
+            <span className="startup-view-label">Startup View</span>
+            <div className="filter-group" role="group" aria-label="Default startup view">
+              <button
+                type="button"
+                className={`filter-pill ${preferences.defaultTab === 'kanban' ? 'is-active' : ''}`}
+                onClick={() => onSelectDefaultTab('kanban')}
+              >
+                Kanban Board
+              </button>
+              <button
+                type="button"
+                className={`filter-pill ${preferences.defaultTab === 'dashboard' ? 'is-active' : ''}`}
+                onClick={() => onSelectDefaultTab('dashboard')}
+              >
+                Spatial Dashboard
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section className="drawer-section">
           <h3 className="drawer-section-title">Curated Backdrops</h3>
           <div className="wallpaper-grid">
@@ -251,7 +320,7 @@ export function WallpaperDrawer({
 
             <label className="slider-field">
               <div className="slider-label-row">
-                <span>Column Glass Blur</span>
+                <span>Glass Blur</span>
                 <strong>{preferences.glassBlur}px</strong>
               </div>
               <input

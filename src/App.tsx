@@ -6,8 +6,14 @@ import {
   type DragEvent,
 } from 'react';
 import {
+  Calculator,
+  Calendar,
+  Columns3,
   FileSpreadsheet,
+  FileText,
+  LayoutDashboard,
   LayoutTemplate,
+  Palette,
   Plus,
   Search,
   Sheet,
@@ -21,6 +27,7 @@ import {
 } from './domain/columns';
 import type { ParsedSheetResult } from './domain/csvSync';
 import { createSampleLeads } from './domain/sampleData';
+import { findUiThemePreset } from './domain/themes';
 import {
   extractCity,
   sanitizeHttpUrl,
@@ -31,6 +38,7 @@ import {
   type LeadCard,
   type LeadStatus,
   type NoteItem,
+  type UiThemeId,
   type WorkspaceTab,
 } from './domain/types';
 import {
@@ -67,6 +75,7 @@ import {
 import { BoardTemplatesModal } from './components/BoardTemplatesModal';
 import { CalculatorView } from './components/calculator/CalculatorView';
 import { CalendarView } from './components/calendar/CalendarView';
+import { DashboardView } from './components/dashboard/DashboardView';
 import { KanbanColumn } from './components/KanbanColumn';
 import { LeadModal, type LeadDraft } from './components/LeadModal';
 import { NotesView } from './components/notes/NotesView';
@@ -78,6 +87,18 @@ const LEAD_TYPE_OPTIONS: readonly { readonly value: LeadTypeFilter; readonly lab
   { value: 'ALL', label: 'All Types' },
   { value: 'Needs Website', label: 'Needs Website' },
   { value: 'Update Candidate', label: 'Update Candidate' },
+];
+
+const DOCK_ITEMS: readonly {
+  readonly id: WorkspaceTab;
+  readonly label: string;
+  readonly icon: typeof Columns3;
+}[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'kanban', label: 'Kanban', icon: Columns3 },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'notes', label: 'Notes', icon: FileText },
+  { id: 'calculator', label: 'Calculator', icon: Calculator },
 ];
 
 function moveLeadCard(
@@ -135,14 +156,14 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('kanban');
+  const [preferences, setPreferences] = useState<BoardPreferences>(() => loadPreferences());
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => loadPreferences().defaultTab);
   const [columns, setColumns] = useState<KanbanColumnConfig[]>(() => loadColumns());
   const [leads, setLeads] = useState<LeadCard[]>(() => loadLeads());
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadCalendarEvents());
   const [notes, setNotes] = useState<NoteItem[]>(() => loadNotes());
   const [activeNoteId, setActiveNoteId] = useState<string | null>(() => loadNotes()[0]?.id ?? null);
   const [calcHistory, setCalcHistory] = useState<CalcHistoryEntry[]>(() => loadCalcHistory());
-  const [preferences, setPreferences] = useState<BoardPreferences>(() => loadPreferences());
   const [customUploadDataUrl, setCustomUploadDataUrl] = useState<string | null>(null);
 
   const [connectedFile, setConnectedFile] = useState<ConnectedSpreadsheetFile | null>(null);
@@ -697,6 +718,12 @@ export function App() {
     showToast('Wallpaper URL applied');
   };
 
+  const handleSelectUiTheme = (uiTheme: UiThemeId) => {
+    setPreferences((prev) => ({ ...prev, uiTheme }));
+    const preset = findUiThemePreset(uiTheme);
+    showToast(`UI Theme: ${preset.name}`);
+  };
+
   const openSyncHub = () => {
     setSyncInitialSection(
       activeTab === 'calendar' || activeTab === 'notes' ? 'workspace' : 'kanban',
@@ -713,233 +740,305 @@ export function App() {
   } as CSSProperties;
 
   return (
-    <div className="app-shell" style={rootVars}>
+    <div className="app-shell" data-ui-theme={preferences.uiTheme} style={rootVars}>
       <div className="wallpaper-layer" style={wallpaperSurface.backdropStyle} aria-hidden="true" />
       <div className="wallpaper-scrim" aria-hidden="true" />
 
-      <TopBar
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
-        boardTitle={preferences.boardTitle}
-        googleSheetUrl={preferences.googleSheetUrl}
-        connectedFileName={connectedFile?.name ?? null}
-        hasUnsavedFileChanges={hasUnsavedFileChanges}
-        isSavingFile={isSavingFile}
-        onSaveConnectedFile={() => void handleSaveConnectedFile()}
-        totalCount={leads.length}
-        doneCount={doneCount}
-        totalPipelineValue={totalPipelineValue}
-        eventsCount={calendarEvents.length}
-        notesCount={notes.length}
-        activeWallpaperThumb={wallpaperSurface.thumb}
-        updateAvailable={updateAvailable}
-        isCheckingUpdate={isCheckingUpdate}
-        isApplyingUpdate={isApplyingUpdate}
-        onUpdateAction={() => void handleUpdateAction()}
-        onOpenNewLead={() => handleOpenNewLead()}
-        onOpenWallpapers={() => setWallpaperDrawerOpen(true)}
-        onOpenSheetSync={openSyncHub}
-      />
-
-      {activeTab === 'kanban' && (
-        <>
-          <div className="kanban-filter-bar" role="region" aria-label="Kanban filters">
-            <label className="search-field">
-              <Search size={14} className="search-icon" aria-hidden="true" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cards, phone, city, notes..."
-                aria-label="Search cards"
-              />
-              {searchQuery && (
+      <div className="spatial-stage-wrapper">
+        {preferences.uiTheme === 'vision-spatial' && (
+          <aside className="spatial-side-dock" aria-label="Quick spatial dock">
+            {DOCK_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
                 <button
+                  key={item.id}
                   type="button"
-                  className="icon-clear-btn"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
+                  className={`dock-icon-btn ${active ? 'is-active' : ''}`}
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => setActiveTab(item.id)}
                 >
-                  <X size={12} />
+                  <Icon size={17} />
                 </button>
-              )}
-            </label>
-
-            <div className="filter-group" role="group" aria-label="Filter by lead type">
-              {LEAD_TYPE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`filter-pill ${leadTypeFilter === option.value ? 'is-active' : ''}`}
-                  onClick={() => setLeadTypeFilter(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            <select
-              className="city-select"
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              aria-label="Filter by city"
-            >
-              <option value="ALL">All Cities</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-
+              );
+            })}
+            <span className="dock-divider" aria-hidden="true" />
             <button
               type="button"
-              className="btn-glass is-compact"
-              onClick={() => setTemplatesModalOpen(true)}
-              title="Switch Kanban template or customize columns"
+              className="dock-icon-btn"
+              title="Themes & Wallpapers"
+              aria-label="Themes & Wallpapers"
+              onClick={() => setWallpaperDrawerOpen(true)}
             >
-              <LayoutTemplate size={14} />
-              <span>Templates &amp; Columns</span>
+              <Palette size={17} />
             </button>
+            <button
+              type="button"
+              className="dock-icon-btn"
+              title="Sync & Backup"
+              aria-label="Sync & Backup"
+              onClick={openSyncHub}
+            >
+              <Sheet size={17} />
+            </button>
+          </aside>
+        )}
 
-            {hasFilters && (
-              <span className="filter-match-count">
-                Showing {filteredLeads.length} of {leads.length}
-              </span>
-            )}
-          </div>
+        <div className="spatial-window-frame">
+          <TopBar
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            boardTitle={preferences.boardTitle}
+            googleSheetUrl={preferences.googleSheetUrl}
+            connectedFileName={connectedFile?.name ?? null}
+            hasUnsavedFileChanges={hasUnsavedFileChanges}
+            isSavingFile={isSavingFile}
+            onSaveConnectedFile={() => void handleSaveConnectedFile()}
+            totalCount={leads.length}
+            doneCount={doneCount}
+            totalPipelineValue={totalPipelineValue}
+            eventsCount={calendarEvents.length}
+            notesCount={notes.length}
+            activeWallpaperThumb={wallpaperSurface.thumb}
+            updateAvailable={updateAvailable}
+            isCheckingUpdate={isCheckingUpdate}
+            isApplyingUpdate={isApplyingUpdate}
+            onUpdateAction={() => void handleUpdateAction()}
+            onOpenNewLead={() => handleOpenNewLead()}
+            onOpenWallpapers={() => setWallpaperDrawerOpen(true)}
+            onOpenSheetSync={openSyncHub}
+          />
 
-          {leads.length === 0 && (
-            <section className="empty-connect-bar" aria-label="Connect spreadsheet">
-              <div className="empty-connect-copy">
-                <strong>Connect your Google Sheet or Excel (.xlsx / .csv)</strong>
-                <span>
-                  Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards, or customize templates.
-                </span>
-              </div>
-              <div className="empty-connect-actions">
-                <button
-                  type="button"
-                  className="btn-primary is-compact"
-                  onClick={() => void handleConnectLocalFile(true)}
+          {activeTab === 'dashboard' && (
+            <main className="workspace-main">
+              <DashboardView
+                boardTitle={preferences.boardTitle}
+                leads={leads}
+                columns={columns}
+                calendarEvents={calendarEvents}
+                notes={notes}
+                calcHistory={calcHistory}
+                onNavigateTab={setActiveTab}
+                onSelectLead={handleSelectLead}
+                onOpenNewLead={() => handleOpenNewLead()}
+                onOpenSync={openSyncHub}
+                onOpenTemplates={() => setTemplatesModalOpen(true)}
+                onSelectNote={setActiveNoteId}
+                onCreateNote={() => {
+                  handleCreateNote();
+                  setActiveTab('notes');
+                }}
+                onLoadSampleData={() => {
+                  setLeads(createSampleLeads());
+                  showToast('Loaded 4 fictional sample cards');
+                }}
+              />
+            </main>
+          )}
+
+          {activeTab === 'kanban' && (
+            <>
+              <div className="kanban-filter-bar" role="region" aria-label="Kanban filters">
+                <label className="search-field">
+                  <Search size={14} className="search-icon" aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search cards, phone, city, notes..."
+                    aria-label="Search cards"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className="icon-clear-btn"
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </label>
+
+                <div className="filter-group" role="group" aria-label="Filter by lead type">
+                  {LEAD_TYPE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`filter-pill ${leadTypeFilter === option.value ? 'is-active' : ''}`}
+                      onClick={() => setLeadTypeFilter(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <select
+                  className="city-select"
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  aria-label="Filter by city"
                 >
-                  <FileSpreadsheet size={14} />
-                  <span>Open Excel / CSV</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-glass is-compact"
-                  onClick={() => {
-                    setSyncInitialSection('kanban');
-                    setSheetSyncOpen(true);
-                  }}
-                >
-                  <Sheet size={14} />
-                  <span>Connect Google Sheet</span>
-                </button>
+                  <option value="ALL">All Cities</option>
+                  {cities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+
                 <button
                   type="button"
                   className="btn-glass is-compact"
                   onClick={() => setTemplatesModalOpen(true)}
+                  title="Switch Kanban template or customize columns"
                 >
                   <LayoutTemplate size={14} />
-                  <span>Templates</span>
+                  <span>Templates &amp; Columns</span>
                 </button>
-                <button
-                  type="button"
-                  className="btn-glass is-compact"
-                  onClick={() => handleOpenNewLead()}
-                >
-                  <Plus size={14} />
-                  <span>Add Card</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-ghost is-compact"
-                  onClick={() => {
-                    setLeads(createSampleLeads());
-                    showToast('Loaded 4 fictional sample cards');
-                  }}
-                >
-                  <Sparkles size={14} />
-                  <span>Try Sample</span>
-                </button>
+
+                {hasFilters && (
+                  <span className="filter-match-count">
+                    Showing {filteredLeads.length} of {leads.length}
+                  </span>
+                )}
               </div>
-            </section>
+
+              {leads.length === 0 && (
+                <section className="empty-connect-bar" aria-label="Connect spreadsheet">
+                  <div className="empty-connect-copy">
+                    <strong>Connect your Google Sheet or Excel (.xlsx / .csv)</strong>
+                    <span>
+                      Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards, or customize templates.
+                    </span>
+                  </div>
+                  <div className="empty-connect-actions">
+                    <button
+                      type="button"
+                      className="btn-primary is-compact"
+                      onClick={() => void handleConnectLocalFile(true)}
+                    >
+                      <FileSpreadsheet size={14} />
+                      <span>Open Excel / CSV</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-glass is-compact"
+                      onClick={() => {
+                        setSyncInitialSection('kanban');
+                        setSheetSyncOpen(true);
+                      }}
+                    >
+                      <Sheet size={14} />
+                      <span>Connect Google Sheet</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-glass is-compact"
+                      onClick={() => setTemplatesModalOpen(true)}
+                    >
+                      <LayoutTemplate size={14} />
+                      <span>Templates</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-glass is-compact"
+                      onClick={() => handleOpenNewLead()}
+                    >
+                      <Plus size={14} />
+                      <span>Add Card</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost is-compact"
+                      onClick={() => {
+                        setLeads(createSampleLeads());
+                        showToast('Loaded 4 fictional sample cards');
+                      }}
+                    >
+                      <Sparkles size={14} />
+                      <span>Try Sample</span>
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              <main className="board-stage scroller" aria-label="Kanban pipeline board">
+                <div className="board-columns">
+                  {columns.map((column) => (
+                    <KanbanColumn
+                      key={column.id}
+                      column={column}
+                      leads={leadsByColumn.get(column.id) ?? []}
+                      draggingLeadId={draggingLeadId}
+                      isDropOver={dropOverColumn === column.id}
+                      dropTargetCardId={dropTargetCardId}
+                      onSelectLead={handleSelectLead}
+                      onAddLeadInColumn={handleOpenNewLead}
+                      onCardDragStart={handleCardDragStart}
+                      onCardDragEnd={handleCardDragEnd}
+                      onCardDragOver={handleCardDragOver}
+                      onCardDrop={handleCardDrop}
+                      onColumnDragOver={handleColumnDragOver}
+                      onColumnDragLeave={handleColumnDragLeave}
+                      onColumnDrop={handleColumnDrop}
+                    />
+                  ))}
+                </div>
+              </main>
+            </>
           )}
 
-          <main className="board-stage scroller" aria-label="Kanban pipeline board">
-            <div className="board-columns">
-              {columns.map((column) => (
-                <KanbanColumn
-                  key={column.id}
-                  column={column}
-                  leads={leadsByColumn.get(column.id) ?? []}
-                  draggingLeadId={draggingLeadId}
-                  isDropOver={dropOverColumn === column.id}
-                  dropTargetCardId={dropTargetCardId}
-                  onSelectLead={handleSelectLead}
-                  onAddLeadInColumn={handleOpenNewLead}
-                  onCardDragStart={handleCardDragStart}
-                  onCardDragEnd={handleCardDragEnd}
-                  onCardDragOver={handleCardDragOver}
-                  onCardDrop={handleCardDrop}
-                  onColumnDragOver={handleColumnDragOver}
-                  onColumnDragLeave={handleColumnDragLeave}
-                  onColumnDrop={handleColumnDrop}
-                />
-              ))}
-            </div>
-          </main>
-        </>
-      )}
+          {activeTab === 'calendar' && (
+            <main className="workspace-main">
+              <CalendarView
+                events={calendarEvents}
+                leads={leads}
+                columns={columns}
+                weekStartsOn={preferences.weekStartsOn}
+                onChangeWeekStartsOn={(weekStartsOn) =>
+                  setPreferences((prev) => ({ ...prev, weekStartsOn }))
+                }
+                onSaveEvent={handleSaveCalendarEvent}
+                onDeleteEvent={handleDeleteCalendarEvent}
+                onOpenLeadCard={handleSelectLead}
+              />
+            </main>
+          )}
 
-      {activeTab === 'calendar' && (
-        <main className="workspace-main">
-          <CalendarView
-            events={calendarEvents}
-            leads={leads}
-            columns={columns}
-            weekStartsOn={preferences.weekStartsOn}
-            onChangeWeekStartsOn={(weekStartsOn) =>
-              setPreferences((prev) => ({ ...prev, weekStartsOn }))
-            }
-            onSaveEvent={handleSaveCalendarEvent}
-            onDeleteEvent={handleDeleteCalendarEvent}
-            onOpenLeadCard={handleSelectLead}
-          />
-        </main>
-      )}
+          {activeTab === 'notes' && (
+            <main className="workspace-main">
+              <NotesView
+                notes={notes}
+                activeNoteId={activeNoteId}
+                onSelectNote={setActiveNoteId}
+                onCreateNote={handleCreateNote}
+                onUpdateNote={handleUpdateNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </main>
+          )}
 
-      {activeTab === 'notes' && (
-        <main className="workspace-main">
-          <NotesView
-            notes={notes}
-            activeNoteId={activeNoteId}
-            onSelectNote={setActiveNoteId}
-            onCreateNote={handleCreateNote}
-            onUpdateNote={handleUpdateNote}
-            onDeleteNote={handleDeleteNote}
-          />
-        </main>
-      )}
-
-      {activeTab === 'calculator' && (
-        <main className="workspace-main">
-          <CalculatorView
-            angleUnit={preferences.calcAngleUnit}
-            history={calcHistory}
-            onChangeAngleUnit={(calcAngleUnit) =>
-              setPreferences((prev) => ({ ...prev, calcAngleUnit }))
-            }
-            onPushHistory={(entry) => setCalcHistory((prev) => [entry, ...prev].slice(0, 50))}
-            onClearHistory={() => {
-              setCalcHistory([]);
-              showToast('Cleared calculator history');
-            }}
-          />
-        </main>
-      )}
+          {activeTab === 'calculator' && (
+            <main className="workspace-main">
+              <CalculatorView
+                angleUnit={preferences.calcAngleUnit}
+                history={calcHistory}
+                onChangeAngleUnit={(calcAngleUnit) =>
+                  setPreferences((prev) => ({ ...prev, calcAngleUnit }))
+                }
+                onPushHistory={(entry) => setCalcHistory((prev) => [entry, ...prev].slice(0, 50))}
+                onClearHistory={() => {
+                  setCalcHistory([]);
+                  showToast('Cleared calculator history');
+                }}
+              />
+            </main>
+          )}
+        </div>
+      </div>
 
       <LeadModal
         open={leadModalOpen}
@@ -963,6 +1062,11 @@ export function App() {
         preferences={preferences}
         customUploadDataUrl={customUploadDataUrl}
         onClose={() => setWallpaperDrawerOpen(false)}
+        onSelectUiTheme={handleSelectUiTheme}
+        onSelectDefaultTab={(defaultTab) => {
+          setPreferences((prev) => ({ ...prev, defaultTab }));
+          showToast(`Startup view: ${defaultTab === 'dashboard' ? 'Spatial Dashboard' : 'Kanban Board'}`);
+        }}
         onSelectPreset={(wallpaperId) => {
           setPreferences((prev) => ({ ...prev, wallpaperId }));
           const preset = findWallpaperPreset(wallpaperId);
