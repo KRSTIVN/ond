@@ -8,7 +8,7 @@ import {
   Sheet,
   X,
 } from 'lucide-react';
-import type { LeadType } from '../domain/types';
+import { sanitizeHttpUrl, type LeadType } from '../domain/types';
 import { OndLogo } from './OndLogo';
 
 export type LeadTypeFilter = 'ALL' | LeadType;
@@ -68,6 +68,7 @@ export function TopBar({
 }: TopBarProps) {
   const hasFilters =
     searchQuery.trim().length > 0 || leadTypeFilter !== 'ALL' || cityFilter !== 'ALL';
+  const safeGoogleSheetUrl = sanitizeHttpUrl(googleSheetUrl);
 
   return (
     <header className="topbar">
@@ -76,10 +77,10 @@ export function TopBar({
         <div className="brand-copy">
           <div className="brand-title-row">
             <h1 className="brand-title">{boardTitle}</h1>
-            {googleSheetUrl && (
+            {safeGoogleSheetUrl && (
               <a
                 className="sheet-origin-link"
-                href={googleSheetUrl}
+                href={safeGoogleSheetUrl}
                 target="_blank"
                 rel="noreferrer"
                 title="Open connected Google Sheet"

@@ -10,6 +10,7 @@ import { KANBAN_COLUMNS, STATUS_TITLES } from './domain/columns';
 import { createSampleLeads } from './domain/sampleData';
 import {
   extractCity,
+  sanitizeHttpUrl,
   type BoardPreferences,
   type LeadCard,
   type LeadStatus,
@@ -223,11 +224,14 @@ export function App() {
     }
 
     if (preferences.wallpaperId === CUSTOM_URL_WALLPAPER_ID && preferences.customWallpaperUrl) {
-      const safeUrl = preferences.customWallpaperUrl.replace(/["'()]/g, '');
-      return {
-        backdropStyle: { backgroundImage: `url("${safeUrl}")` } as CSSProperties,
-        thumb: `url("${safeUrl}") center/cover`,
-      };
+      const validated = sanitizeHttpUrl(preferences.customWallpaperUrl);
+      if (validated) {
+        const safeUrl = validated.replace(/["'()]/g, '');
+        return {
+          backdropStyle: { backgroundImage: `url("${safeUrl}")` } as CSSProperties,
+          thumb: `url("${safeUrl}") center/cover`,
+        };
+      }
     }
 
     const preset = findWallpaperPreset(preferences.wallpaperId) ?? WALLPAPER_PRESETS[0];
@@ -293,9 +297,12 @@ export function App() {
   const handleSaveLead = (draft: LeadDraft) => {
     const now = new Date().toISOString();
     if (draft.id) {
-      mutateLeads((prev) =>
-        prev.map((item) =>
-          item.id === draft.id
+      const targetId = draft.id;
+      mutateLeads((prev) => {
+        const existing = prev.find((item) => item.id === targetId);
+        const statusChanged = existing ? existing.status !== draft.status : false;
+        const updated = prev.map((item) =>
+          item.id === targetId
             ? {
                 ...item,
                 businessName: draft.businessName,
@@ -312,8 +319,9 @@ export function App() {
                 updatedAt: now,
               }
             : item,
-        ),
-      );
+        );
+        return statusChanged ? moveLeadCard(updated, targetId, draft.status, null) : updated;
+      });
       showToast(`Saved "${draft.businessName}"`);
       return;
     }
@@ -421,15 +429,21 @@ export function App() {
   };
 
   const handleUploadWallpaper = async (file: File) => {
-    const dataUrl = await readFileAsDataUrl(file);
-    await saveCustomWallpaperDataUrl(dataUrl);
-    setCustomUploadDataUrl(dataUrl);
-    setPreferences((prev) => ({
-      ...prev,
-      wallpaperId: CUSTOM_UPLOAD_WALLPAPER_ID,
-      hasCustomUpload: true,
-    }));
-    showToast('Custom wallpaper applied');
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      await saveCustomWallpaperDataUrl(dataUrl);
+      setCustomUploadDataUrl(dataUrl);
+      setPreferences((prev) => ({
+        ...prev,
+        wallpaperId: CUSTOM_UPLOAD_WALLPAPER_ID,
+        hasCustomUpload: true,
+      }));
+      showToast('Custom wallpaper applied');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unable to save custom wallpaper.';
+      showToast(msg);
+      throw error;
+    }
   };
 
   const handleClearCustomUpload = async () => {

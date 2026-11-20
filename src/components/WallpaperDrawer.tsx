@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
   Check,
   ImagePlus,
@@ -12,7 +12,7 @@ import {
   CUSTOM_URL_WALLPAPER_ID,
   WALLPAPER_PRESETS,
 } from '../domain/wallpapers';
-import type { BoardPreferences } from '../domain/types';
+import { sanitizeHttpUrl, type BoardPreferences } from '../domain/types';
 import { useDialogModal } from '../hooks/useDialogModal';
 
 interface WallpaperDrawerProps {
@@ -44,6 +44,12 @@ export function WallpaperDrawer({
   const [urlInput, setUrlInput] = useState(preferences.customWallpaperUrl);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    setUrlInput(preferences.customWallpaperUrl);
+    setUploadError(null);
+  }, [open, preferences.customWallpaperUrl]);
+
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -57,15 +63,25 @@ export function WallpaperDrawer({
     }
 
     setUploadError(null);
-    await onUploadWallpaper(file);
-    event.target.value = '';
+    try {
+      await onUploadWallpaper(file);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unable to save wallpaper locally.';
+      setUploadError(msg);
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleUrlSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmed = urlInput.trim();
-    if (!trimmed) return;
-    onApplyCustomUrl(trimmed);
+    const safeUrl = sanitizeHttpUrl(urlInput);
+    if (!safeUrl) {
+      setUploadError('Enter a valid http:// or https:// image URL.');
+      return;
+    }
+    setUploadError(null);
+    onApplyCustomUrl(safeUrl);
   };
 
   return (

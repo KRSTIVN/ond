@@ -5,9 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DIST_DIR = path.join(__dirname, 'dist');
+const DIST_DIR = path.resolve(__dirname, 'dist');
+const DIST_PREFIX = `${DIST_DIR}${path.sep}`;
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT ?? 5173);
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+};
 
 const MIME_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -24,51 +31,82 @@ const MIME_TYPES = new Map([
 ]);
 
 function resolveSafePath(urlPathname) {
-  const decoded = decodeURIComponent(urlPathname.split('?')[0] ?? '/');
-  const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, '');
-  const candidate = path.join(DIST_DIR, normalized === '/' ? 'index.html' : normalized);
-  if (!candidate.startsWith(DIST_DIR)) {
-    return null;
+  let decoded;
+  try {
+    decoded = decodeURIComponent((urlPathname.split('?')[0] ?? '/').replace(/\0/g, ''));
+  } catch {
+    return { status: 400, filePath: null };
   }
-  return candidate;
+
+  const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, '');
+  const relativePath = normalized === '/' || normalized === path.sep ? 'index.html' : normalized;
+  const candidate = path.resolve(DIST_DIR, relativePath.replace(/^[/\\]+/, ''));
+
+  if (candidate !== DIST_DIR && !candidate.startsWith(DIST_PREFIX)) {
+    return { status: 403, filePath: null };
+  }
+
+  return { status: 200, filePath: candidate };
 }
 
 const server = http.createServer(async (req, res) => {
-  const rawUrl = req.url ?? '/';
-
-  if (rawUrl === '/api/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ ok: true, app: 'ond' }));
+  const method = req.method ?? 'GET';
+  if (method !== 'GET' && method !== 'HEAD') {
+    res.writeHead(405, {
+      ...SECURITY_HEADERS,
+      Allow: 'GET, HEAD',
+      'Content-Type': 'text/plain; charset=utf-8',
+    });
+    res.end('Method Not Allowed');
     return;
   }
 
-  const targetPath = resolveSafePath(rawUrl);
-  if (!targetPath) {
-    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Forbidden');
+  const rawUrl = req.url ?? '/';
+  if (rawUrl === '/api/health') {
+    res.writeHead(200, {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    res.end(method === 'HEAD' ? undefined : JSON.stringify({ ok: true, app: 'ond' }));
+    return;
+  }
+
+  const resolved = resolveSafePath(rawUrl);
+  if (!resolved.filePath) {
+    res.writeHead(resolved.status, {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'text/plain; charset=utf-8',
+    });
+    res.end(resolved.status === 400 ? 'Bad Request' : 'Forbidden');
     return;
   }
 
   try {
-    const stat = await fs.stat(targetPath);
-    const filePath = stat.isDirectory() ? path.join(targetPath, 'index.html') : targetPath;
+    const stat = await fs.stat(resolved.filePath);
+    const filePath = stat.isDirectory() ? path.join(resolved.filePath, 'index.html') : resolved.filePath;
     const ext = path.extname(filePath).toLowerCase();
     const content = await fs.readFile(filePath);
     res.writeHead(200, {
+      ...SECURITY_HEADERS,
       'Content-Type': MIME_TYPES.get(ext) ?? 'application/octet-stream',
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
     });
-    res.end(content);
+    res.end(method === 'HEAD' ? undefined : content);
   } catch {
     try {
       const indexHtml = await fs.readFile(path.join(DIST_DIR, 'index.html'));
       res.writeHead(200, {
+        ...SECURITY_HEADERS,
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-cache',
       });
-      res.end(indexHtml);
+      res.end(method === 'HEAD' ? undefined : indexHtml);
     } catch {
-      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.writeHead(500, {
+        ...SECURITY_HEADERS,
+        'Content-Type': 'text/plain; charset=utf-8',
+      });
       res.end('Build output missing. Run "npm run build" first.');
     }
   }

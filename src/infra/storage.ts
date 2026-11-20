@@ -1,6 +1,7 @@
 import {
   isLeadStatus,
   normalizeLeadType,
+  sanitizeHttpUrl,
   type BoardPreferences,
   type LeadCard,
 } from '../domain/types';
@@ -24,6 +25,7 @@ export const DEFAULT_PREFERENCES: BoardPreferences = {
   dimOpacity: 0.42,
   glassBlur: 18,
   appsScriptUrl: '',
+  appsScriptToken: '',
   csvPublishUrl: '',
 };
 
@@ -100,13 +102,18 @@ export function loadPreferences(): BoardPreferences {
 
     return {
       boardTitle: migratedTitle,
-      googleSheetUrl: typeof parsed.googleSheetUrl === 'string' ? parsed.googleSheetUrl : '',
+      googleSheetUrl:
+        typeof parsed.googleSheetUrl === 'string'
+          ? (sanitizeHttpUrl(parsed.googleSheetUrl) ?? '')
+          : '',
       wallpaperId:
         typeof parsed.wallpaperId === 'string'
           ? normalizeWallpaperId(parsed.wallpaperId)
           : DEFAULT_PREFERENCES.wallpaperId,
       customWallpaperUrl:
-        typeof parsed.customWallpaperUrl === 'string' ? parsed.customWallpaperUrl : '',
+        typeof parsed.customWallpaperUrl === 'string'
+          ? (sanitizeHttpUrl(parsed.customWallpaperUrl) ?? '')
+          : '',
       hasCustomUpload: Boolean(parsed.hasCustomUpload),
       dimOpacity:
         typeof parsed.dimOpacity === 'number' && parsed.dimOpacity >= 0 && parsed.dimOpacity <= 0.85
@@ -116,8 +123,15 @@ export function loadPreferences(): BoardPreferences {
         typeof parsed.glassBlur === 'number' && parsed.glassBlur >= 4 && parsed.glassBlur <= 32
           ? parsed.glassBlur
           : DEFAULT_PREFERENCES.glassBlur,
-      appsScriptUrl: typeof parsed.appsScriptUrl === 'string' ? parsed.appsScriptUrl : '',
-      csvPublishUrl: typeof parsed.csvPublishUrl === 'string' ? parsed.csvPublishUrl : '',
+      appsScriptUrl:
+        typeof parsed.appsScriptUrl === 'string'
+          ? (sanitizeHttpUrl(parsed.appsScriptUrl) ?? '')
+          : '',
+      appsScriptToken: typeof parsed.appsScriptToken === 'string' ? parsed.appsScriptToken : '',
+      csvPublishUrl:
+        typeof parsed.csvPublishUrl === 'string'
+          ? (sanitizeHttpUrl(parsed.csvPublishUrl) ?? '')
+          : '',
     };
   } catch {
     return { ...DEFAULT_PREFERENCES };

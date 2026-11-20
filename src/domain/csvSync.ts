@@ -21,15 +21,27 @@ export const SHEET_HEADERS = [
   'Follow-up Date',
 ] as const;
 
-function escapeCsvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+function neutralizeFormula(value: string): string {
+  if (/^[=@\t\r]/.test(value)) {
+    return `'${value}`;
+  }
+  if (/^[+-]/.test(value) && !/^[+-]?[0-9().\s-]+$/.test(value)) {
+    return `'${value}`;
   }
   return value;
 }
 
+function escapeCsvCell(value: string): string {
+  const safe = neutralizeFormula(value);
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
+}
+
 function escapeTsvCell(value: string): string {
-  return value.replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
+  const safe = neutralizeFormula(value);
+  return safe.replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
 }
 
 export function leadToRowValues(lead: LeadCard): readonly string[] {
@@ -180,10 +192,15 @@ export function parseLeadsFromMatrix(
   const idxDealValue = findColumnIndex(headers, ['deal value', 'value', 'budget', 'price', 'amount']);
   const idxFollowUp = findColumnIndex(headers, ['follow-up date', 'follow up', 'followup', 'due']);
 
-  const existingByName = new Map<string, LeadCard>(
-    existingLeads.map((lead) => [lead.businessName.trim().toLowerCase(), lead]),
-  );
+  const existingByName = new Map<string, LeadCard[]>();
+  for (const lead of existingLeads) {
+    const key = lead.businessName.trim().toLowerCase();
+    const bucket = existingByName.get(key) ?? [];
+    bucket.push(lead);
+    existingByName.set(key, bucket);
+  }
 
+  const usedIds = new Set<string>();
   const now = new Date().toISOString();
   const statusOrderCounters: Record<LeadStatus, number> = {
     leads: 0,
@@ -200,7 +217,14 @@ export function parseLeadsFromMatrix(
     const businessName = (row[idxName] ?? '').trim();
     if (!businessName) continue;
 
-    const existing = existingByName.get(businessName.toLowerCase());
+    const bucket = existingByName.get(businessName.toLowerCase());
+    const existing = bucket && bucket.length > 0 ? bucket.shift() : undefined;
+    const candidateId =
+      existing && !usedIds.has(existing.id)
+        ? existing.id
+        : `lead-${crypto.randomUUID().slice(0, 8)}`;
+    usedIds.add(candidateId);
+
     const rawStatus = idxStatus !== -1 ? (row[idxStatus] ?? '') : '';
     const status: LeadStatus = rawStatus.trim()
       ? normalizeStatusLabel(rawStatus)
@@ -210,7 +234,7 @@ export function parseLeadsFromMatrix(
     statusOrderCounters[status] += 1;
 
     parsedLeads.push({
-      id: existing?.id ?? `lead-${crypto.randomUUID().slice(0, 8)}`,
+      id: candidateId,
       businessName,
       category: idxCategory !== -1 ? (row[idxCategory] ?? '').trim() : (existing?.category ?? ''),
       address: idxAddress !== -1 ? (row[idxAddress] ?? '').trim() : (existing?.address ?? ''),
@@ -261,12 +285,24 @@ export function parseLeadsFromText(
 export function resolveGoogleSheetCsvUrl(rawUrl: string): string | null {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
-  if (/[?&](output|format)=csv/i.test(trimmed)) return trimmed;
 
-  const idMatch = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if (!idMatch || !idMatch[1]) return trimmed;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
 
-  const gidMatch = trimmed.match(/[?&#]gid=(\d+)/);
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return null;
+  }
+
+  if (/[?&](output|format)=csv/i.test(parsed.href)) return parsed.href;
+
+  const idMatch = parsed.pathname.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!idMatch || !idMatch[1]) return parsed.href;
+
+  const gidMatch = parsed.href.match(/[?&#]gid=(\d+)/);
   const gidParam = gidMatch && gidMatch[1] ? `&gid=${gidMatch[1]}` : '';
   return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv${gidParam}`;
 }
@@ -274,28 +310,46 @@ export function resolveGoogleSheetCsvUrl(rawUrl: string): string | null {
 export function buildAppsScriptBridge(): string {
   return `// Paste into Extensions -> Apps Script in your Google Sheet
 // Deploy -> New deployment -> Web app -> Execute as: Me -> Who has access: Anyone
+// Recommended: set API_TOKEN to a strong random string and enter the same token in OND.
 const SHEET_NAME = 'Sheet1';
+const API_TOKEN = '';
 const HEADERS = [
   'Business Name', 'Category', 'Address', 'Phone Number', 'Email',
   'Website URL', 'Lead Type', 'Notes', 'Status', 'Deal Value', 'Follow-up Date'
 ];
 
-function doGet() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const values = sheet.getDataRange().getValues();
+function getTargetSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+}
+
+function jsonOut(obj) {
   return ContentService
-    .createTextOutput(JSON.stringify({ rows: values }))
+    .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function doGet(e) {
+  if (API_TOKEN && (!e || !e.parameter || e.parameter.token !== API_TOKEN)) {
+    return jsonOut({ ok: false, error: 'Unauthorized' });
+  }
+  const sheet = getTargetSheet();
+  const values = sheet.getDataRange().getValues();
+  return jsonOut({ ok: true, rows: values });
+}
+
 function doPost(e) {
-  const payload = JSON.parse(e.postData.contents);
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const rows = [HEADERS, ...(payload.rows || [])];
+  const payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+  if (API_TOKEN && payload.token !== API_TOKEN) {
+    return jsonOut({ ok: false, error: 'Unauthorized' });
+  }
+  if (!Array.isArray(payload.rows)) {
+    return jsonOut({ ok: false, error: 'Invalid rows payload' });
+  }
+  const sheet = getTargetSheet();
+  const rows = [HEADERS, ...payload.rows];
   sheet.clearContents();
   sheet.getRange(1, 1, rows.length, HEADERS.length).setValues(rows);
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, updated: rows.length - 1 }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return jsonOut({ ok: true, updated: rows.length - 1 });
 }`;
 }

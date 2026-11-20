@@ -58,6 +58,7 @@ export interface BoardPreferences {
   dimOpacity: number;
   glassBlur: number;
   appsScriptUrl: string;
+  appsScriptToken: string;
   csvPublishUrl: string;
 }
 
@@ -113,13 +114,31 @@ export function extractCity(address: string): string {
   return fallback || 'Location TBD';
 }
 
+export function sanitizeHttpUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeWebsiteHref(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed || /^none$/i.test(trimmed) || /^n\/a$/i.test(trimmed)) {
     return null;
   }
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.includes('.')) return `https://${trimmed}`;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    return sanitizeHttpUrl(trimmed);
+  }
+  if (trimmed.includes('.')) {
+    return sanitizeHttpUrl(`https://${trimmed}`);
+  }
   return null;
 }
 

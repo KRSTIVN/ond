@@ -17,6 +17,7 @@ import {
 import { STATUS_TITLES } from '../domain/columns';
 import {
   buildAppsScriptBridge,
+  parseLeadsFromMatrix,
   parseLeadsFromText,
   resolveGoogleSheetCsvUrl,
   serializeLeadsToCsv,
@@ -24,7 +25,7 @@ import {
 } from '../domain/csvSync';
 import { downloadExcelFile } from '../domain/excelSync';
 import { createSampleLeads } from '../domain/sampleData';
-import type { BoardPreferences, LeadCard } from '../domain/types';
+import { sanitizeHttpUrl, type BoardPreferences, type LeadCard } from '../domain/types';
 import {
   importSpreadsheetFile,
   isFileSystemAccessSupported,
@@ -46,7 +47,10 @@ interface SheetSyncModalProps {
   readonly onClearBoard: () => void;
   readonly onUpdateSettings: (
     patch: Partial<
-      Pick<BoardPreferences, 'boardTitle' | 'googleSheetUrl' | 'appsScriptUrl' | 'csvPublishUrl'>
+      Pick<
+        BoardPreferences,
+        'boardTitle' | 'googleSheetUrl' | 'appsScriptUrl' | 'appsScriptToken' | 'csvPublishUrl'
+      >
     >,
   ) => void;
 }
@@ -73,6 +77,7 @@ export function SheetSyncModal({
   const [sheetUrlInput, setSheetUrlInput] = useState(preferences.googleSheetUrl);
   const [csvUrlInput, setCsvUrlInput] = useState(preferences.csvPublishUrl);
   const [appsScriptUrl, setAppsScriptUrl] = useState(preferences.appsScriptUrl);
+  const [appsScriptToken, setAppsScriptToken] = useState(preferences.appsScriptToken);
   const [pasteText, setPasteText] = useState('');
   const [copiedTsv, setCopiedTsv] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
@@ -83,6 +88,7 @@ export function SheetSyncModal({
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const supportsLiveFilePicker = isFileSystemAccessSupported();
+  const safeLinkedSheetUrl = sanitizeHttpUrl(preferences.googleSheetUrl);
 
   useEffect(() => {
     if (!open) return;
@@ -90,13 +96,19 @@ export function SheetSyncModal({
     setSheetUrlInput(preferences.googleSheetUrl);
     setCsvUrlInput(preferences.csvPublishUrl);
     setAppsScriptUrl(preferences.appsScriptUrl);
+    setAppsScriptToken(preferences.appsScriptToken);
     setConfirmingClear(false);
   }, [open, preferences]);
 
   const handleSaveIdentity = () => {
     const cleanTitle = boardTitleInput.trim() || 'OND';
-    const cleanUrl = sheetUrlInput.trim();
-    onUpdateSettings({ boardTitle: cleanTitle, googleSheetUrl: cleanUrl });
+    const rawUrl = sheetUrlInput.trim();
+    if (rawUrl && !sanitizeHttpUrl(rawUrl)) {
+      setErrorMessage('Google Sheet URL must start with https:// or http://.');
+      return;
+    }
+    const safeUrl = rawUrl ? (sanitizeHttpUrl(rawUrl) ?? '') : '';
+    onUpdateSettings({ boardTitle: cleanTitle, googleSheetUrl: safeUrl });
     setErrorMessage(null);
     setStatusMessage('Saved board title and Google Sheet link locally.');
   };
@@ -214,13 +226,14 @@ export function SheetSyncModal({
   };
 
   const handlePushToAppsScript = async () => {
-    const endpoint = appsScriptUrl.trim();
+    const endpoint = sanitizeHttpUrl(appsScriptUrl);
     if (!endpoint) {
-      setErrorMessage('Paste your deployed Google Apps Script Web App URL first.');
+      setErrorMessage('Paste a valid https:// Google Apps Script Web App URL first.');
       return;
     }
 
-    onUpdateSettings({ appsScriptUrl: endpoint });
+    const token = appsScriptToken.trim();
+    onUpdateSettings({ appsScriptUrl: endpoint, appsScriptToken: token });
     setIsSyncing(true);
     setErrorMessage(null);
 
@@ -242,47 +255,65 @@ export function SheetSyncModal({
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ token, rows }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
 
+      const result = (await response.json()) as { ok?: boolean; error?: string };
+      if (result.ok === false) {
+        throw new Error(result.error ?? 'Apps Script rejected the request.');
+      }
+
       setStatusMessage(`Pushed ${leads.length} cards directly to your Google Sheet!`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Network error';
-      setErrorMessage(`Push failed (${msg}). Verify Apps Script is deployed as "Anyone".`);
+      setErrorMessage(`Push failed (${msg}). Verify Apps Script deployment and API token.`);
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handlePullFromAppsScript = async () => {
-    const endpoint = appsScriptUrl.trim();
+    const endpoint = sanitizeHttpUrl(appsScriptUrl);
     if (!endpoint) {
-      setErrorMessage('Paste your deployed Google Apps Script Web App URL first.');
+      setErrorMessage('Paste a valid https:// Google Apps Script Web App URL first.');
       return;
     }
 
-    onUpdateSettings({ appsScriptUrl: endpoint });
+    const token = appsScriptToken.trim();
+    onUpdateSettings({ appsScriptUrl: endpoint, appsScriptToken: token });
     setIsSyncing(true);
     setErrorMessage(null);
 
     try {
-      const response = await fetch(endpoint);
+      const fetchUrl = new URL(endpoint);
+      if (token) {
+        fetchUrl.searchParams.set('token', token);
+      }
+
+      const response = await fetch(fetchUrl.href);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const payload = (await response.json()) as { rows?: unknown[][] };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        rows?: unknown[][];
+      };
+      if (payload.ok === false) {
+        throw new Error(payload.error ?? 'Unauthorized');
+      }
       if (!Array.isArray(payload.rows)) {
         throw new Error('Unexpected response format (expected { rows: [...] })');
       }
 
-      const tsv = payload.rows
-        .map((row) => row.map((cell) => String(cell ?? '').replace(/\t/g, ' ')).join('\t'))
-        .join('\n');
-      const parsed = parseLeadsFromText(tsv, leads);
+      const matrix = payload.rows.map((row) =>
+        Array.isArray(row) ? row.map((cell) => String(cell ?? '')) : [],
+      );
+      const parsed = parseLeadsFromMatrix(matrix, leads);
 
       if (!parsed.ok || !parsed.data) {
         throw new Error(parsed.error ?? 'Failed to parse sheet rows');
@@ -355,10 +386,10 @@ export function SheetSyncModal({
               <Check size={13} />
               <span>Save Board Info</span>
             </button>
-            {preferences.googleSheetUrl && (
+            {safeLinkedSheetUrl && (
               <a
                 className="btn-ghost is-compact"
-                href={preferences.googleSheetUrl}
+                href={safeLinkedSheetUrl}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -543,6 +574,16 @@ export function SheetSyncModal({
             >
               <span>Push</span>
             </button>
+          </div>
+
+          <div className="url-input-row">
+            <input
+              type="password"
+              value={appsScriptToken}
+              onChange={(e) => setAppsScriptToken(e.target.value)}
+              placeholder="Optional shared API_TOKEN (recommended for private sheets)"
+              autoComplete="off"
+            />
           </div>
         </section>
 
