@@ -1,38 +1,36 @@
 import {
   ArrowDownToLine,
+  Calculator,
+  Calendar,
+  Columns3,
   ExternalLink,
   FileSpreadsheet,
+  FileText,
   Image as ImageIcon,
   Plus,
   RefreshCw,
   Save,
-  Search,
   Sheet,
-  X,
 } from 'lucide-react';
-import { sanitizeHttpUrl, type LeadType } from '../domain/types';
+import { sanitizeHttpUrl, type WorkspaceTab } from '../domain/types';
 import { OndLogo } from './OndLogo';
 
-export type LeadTypeFilter = 'ALL' | LeadType;
+export type LeadTypeFilter = 'ALL' | 'Needs Website' | 'Update Candidate' | 'Other';
 
 interface TopBarProps {
+  readonly activeTab: WorkspaceTab;
+  readonly onChangeTab: (tab: WorkspaceTab) => void;
   readonly boardTitle: string;
   readonly googleSheetUrl: string;
   readonly connectedFileName: string | null;
   readonly hasUnsavedFileChanges: boolean;
   readonly isSavingFile: boolean;
   readonly onSaveConnectedFile: () => void;
-  readonly searchQuery: string;
-  readonly onSearchChange: (value: string) => void;
-  readonly leadTypeFilter: LeadTypeFilter;
-  readonly onLeadTypeFilterChange: (value: LeadTypeFilter) => void;
-  readonly cityFilter: string;
-  readonly cities: readonly string[];
-  readonly onCityFilterChange: (value: string) => void;
   readonly totalCount: number;
-  readonly filteredCount: number;
   readonly doneCount: number;
   readonly totalPipelineValue: number;
+  readonly eventsCount: number;
+  readonly notesCount: number;
   readonly activeWallpaperThumb: string;
   readonly updateAvailable: boolean;
   readonly isCheckingUpdate: boolean;
@@ -43,30 +41,31 @@ interface TopBarProps {
   readonly onOpenSheetSync: () => void;
 }
 
-const LEAD_TYPE_OPTIONS: readonly { readonly value: LeadTypeFilter; readonly label: string }[] = [
-  { value: 'ALL', label: 'All Types' },
-  { value: 'Needs Website', label: 'Needs Website' },
-  { value: 'Update Candidate', label: 'Update Candidate' },
+const WORKSPACE_TABS: readonly {
+  readonly id: WorkspaceTab;
+  readonly label: string;
+  readonly icon: typeof Columns3;
+}[] = [
+  { id: 'kanban', label: 'Kanban', icon: Columns3 },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'notes', label: 'Notes', icon: FileText },
+  { id: 'calculator', label: 'Calculator', icon: Calculator },
 ];
 
 export function TopBar({
+  activeTab,
+  onChangeTab,
   boardTitle,
   googleSheetUrl,
   connectedFileName,
   hasUnsavedFileChanges,
   isSavingFile,
   onSaveConnectedFile,
-  searchQuery,
-  onSearchChange,
-  leadTypeFilter,
-  onLeadTypeFilterChange,
-  cityFilter,
-  cities,
-  onCityFilterChange,
   totalCount,
-  filteredCount,
   doneCount,
   totalPipelineValue,
+  eventsCount,
+  notesCount,
   activeWallpaperThumb,
   updateAvailable,
   isCheckingUpdate,
@@ -76,14 +75,12 @@ export function TopBar({
   onOpenWallpapers,
   onOpenSheetSync,
 }: TopBarProps) {
-  const hasFilters =
-    searchQuery.trim().length > 0 || leadTypeFilter !== 'ALL' || cityFilter !== 'ALL';
   const safeGoogleSheetUrl = sanitizeHttpUrl(googleSheetUrl);
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <OndLogo size={38} className="brand-logo" />
+        <OndLogo size={36} className="brand-logo" />
         <div className="brand-copy">
           <div className="brand-title-row">
             <h1 className="brand-title">{boardTitle}</h1>
@@ -95,8 +92,8 @@ export function TopBar({
                 rel="noreferrer"
                 title="Open connected Google Sheet"
               >
-                <span>Google Sheet</span>
-                <ExternalLink size={12} />
+                <span>Sheet</span>
+                <ExternalLink size={11} />
               </a>
             )}
             {connectedFileName && (
@@ -114,72 +111,54 @@ export function TopBar({
             )}
           </div>
           <div className="brand-stats">
-            <span>
-              {hasFilters ? `${filteredCount} of ${totalCount}` : `${totalCount}`} cards
-            </span>
-            <span className="stat-dot" aria-hidden="true">•</span>
-            <span>{doneCount} done</span>
-            {totalPipelineValue > 0 && (
+            {activeTab === 'kanban' && (
               <>
+                <span>{totalCount} cards</span>
                 <span className="stat-dot" aria-hidden="true">•</span>
-                <span className="stat-value">
-                  ${totalPipelineValue.toLocaleString()} pipeline
-                </span>
+                <span>{doneCount} done</span>
+                {totalPipelineValue > 0 && (
+                  <>
+                    <span className="stat-dot" aria-hidden="true">•</span>
+                    <span className="stat-value">
+                      ${totalPipelineValue.toLocaleString()} pipeline
+                    </span>
+                  </>
+                )}
               </>
             )}
+            {activeTab === 'calendar' && (
+              <span>
+                {eventsCount} scheduled {eventsCount === 1 ? 'event' : 'events'}
+              </span>
+            )}
+            {activeTab === 'notes' && (
+              <span>
+                {notesCount} markdown {notesCount === 1 ? 'note' : 'notes'}
+              </span>
+            )}
+            {activeTab === 'calculator' && <span>Scientific &amp; 24 profession formulas</span>}
           </div>
         </div>
       </div>
 
-      <div className="topbar-center">
-        <label className="search-field">
-          <Search size={15} className="search-icon" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search cards, phone, city..."
-            aria-label="Search cards"
-          />
-          {searchQuery && (
+      <nav className="workspace-nav" aria-label="Workspace tools">
+        {WORKSPACE_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
             <button
+              key={tab.id}
               type="button"
-              className="icon-clear-btn"
-              onClick={() => onSearchChange('')}
-              aria-label="Clear search"
+              className={`workspace-tab-btn ${active ? 'is-active' : ''}`}
+              aria-current={active ? 'page' : undefined}
+              onClick={() => onChangeTab(tab.id)}
             >
-              <X size={13} />
+              <Icon size={15} />
+              <span>{tab.label}</span>
             </button>
-          )}
-        </label>
-
-        <div className="filter-group" role="group" aria-label="Filter by lead type">
-          {LEAD_TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`filter-pill ${leadTypeFilter === option.value ? 'is-active' : ''}`}
-              onClick={() => onLeadTypeFilterChange(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <select
-          className="city-select"
-          value={cityFilter}
-          onChange={(e) => onCityFilterChange(e.target.value)}
-          aria-label="Filter by city"
-        >
-          <option value="ALL">All Cities</option>
-          {cities.map((city) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
-          ))}
-        </select>
-      </div>
+          );
+        })}
+      </nav>
 
       <div className="topbar-right">
         <button
@@ -231,10 +210,12 @@ export function TopBar({
           <span>Sheets / Excel</span>
         </button>
 
-        <button type="button" className="btn-primary" onClick={onOpenNewLead}>
-          <Plus size={16} />
-          <span>Add Card</span>
-        </button>
+        {activeTab === 'kanban' && (
+          <button type="button" className="btn-primary" onClick={onOpenNewLead}>
+            <Plus size={16} />
+            <span>Add Card</span>
+          </button>
+        )}
       </div>
     </header>
   );

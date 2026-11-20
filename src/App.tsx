@@ -5,15 +5,19 @@ import {
   type CSSProperties,
   type DragEvent,
 } from 'react';
-import { FileSpreadsheet, Plus, Sheet, Sparkles } from 'lucide-react';
+import { FileSpreadsheet, Plus, Search, Sheet, Sparkles, X } from 'lucide-react';
 import { KANBAN_COLUMNS, STATUS_TITLES } from './domain/columns';
 import { createSampleLeads } from './domain/sampleData';
 import {
   extractCity,
   sanitizeHttpUrl,
   type BoardPreferences,
+  type CalcHistoryEntry,
+  type CalendarEvent,
   type LeadCard,
   type LeadStatus,
+  type NoteItem,
+  type WorkspaceTab,
 } from './domain/types';
 import {
   CUSTOM_UPLOAD_WALLPAPER_ID,
@@ -28,18 +32,33 @@ import {
 } from './infra/fileBridge';
 import {
   clearCustomWallpaperDataUrl,
+  loadCalcHistory,
+  loadCalendarEvents,
   loadCustomWallpaperDataUrl,
   loadLeads,
+  loadNotes,
   loadPreferences,
+  saveCalcHistory,
+  saveCalendarEvents,
   saveCustomWallpaperDataUrl,
   saveLeads,
+  saveNotes,
   savePreferences,
 } from './infra/storage';
+import { CalculatorView } from './components/calculator/CalculatorView';
+import { CalendarView } from './components/calendar/CalendarView';
 import { KanbanColumn } from './components/KanbanColumn';
 import { LeadModal, type LeadDraft } from './components/LeadModal';
+import { NotesView } from './components/notes/NotesView';
 import { SheetSyncModal } from './components/SheetSyncModal';
 import { TopBar, type LeadTypeFilter } from './components/TopBar';
 import { WallpaperDrawer } from './components/WallpaperDrawer';
+
+const LEAD_TYPE_OPTIONS: readonly { readonly value: LeadTypeFilter; readonly label: string }[] = [
+  { value: 'ALL', label: 'All Types' },
+  { value: 'Needs Website', label: 'Needs Website' },
+  { value: 'Update Candidate', label: 'Update Candidate' },
+];
 
 function moveLeadCard(
   allLeads: readonly LeadCard[],
@@ -96,7 +115,12 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function App() {
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('kanban');
   const [leads, setLeads] = useState<LeadCard[]>(() => loadLeads());
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadCalendarEvents());
+  const [notes, setNotes] = useState<NoteItem[]>(() => loadNotes());
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(() => loadNotes()[0]?.id ?? null);
+  const [calcHistory, setCalcHistory] = useState<CalcHistoryEntry[]>(() => loadCalcHistory());
   const [preferences, setPreferences] = useState<BoardPreferences>(() => loadPreferences());
   const [customUploadDataUrl, setCustomUploadDataUrl] = useState<string | null>(null);
 
@@ -127,8 +151,20 @@ export function App() {
   }, [leads]);
 
   useEffect(() => {
+    saveCalendarEvents(calendarEvents);
+  }, [calendarEvents]);
+
+  useEffect(() => {
+    saveNotes(notes);
+  }, [notes]);
+
+  useEffect(() => {
+    saveCalcHistory(calcHistory);
+  }, [calcHistory]);
+
+  useEffect(() => {
     savePreferences(preferences);
-    document.title = `${preferences.boardTitle} — Kanban Pipeline`;
+    document.title = `${preferences.boardTitle} — Workspace`;
   }, [preferences]);
 
   useEffect(() => {
@@ -497,6 +533,47 @@ export function App() {
     handleCardDragEnd();
   };
 
+  const handleSaveCalendarEvent = (evt: CalendarEvent) => {
+    setCalendarEvents((prev) => {
+      const exists = prev.some((item) => item.id === evt.id);
+      return exists ? prev.map((item) => (item.id === evt.id ? evt : item)) : [...prev, evt];
+    });
+    showToast(`Saved event "${evt.title}"`);
+  };
+
+  const handleDeleteCalendarEvent = (eventId: string) => {
+    setCalendarEvents((prev) => prev.filter((item) => item.id !== eventId));
+    showToast('Removed event');
+  };
+
+  const handleCreateNote = () => {
+    const newNote: NoteItem = {
+      id: `note-${crypto.randomUUID().slice(0, 8)}`,
+      title: 'Untitled Note',
+      content: '## Notes\n\n- [ ] Action item\n',
+      tags: [],
+      pinned: false,
+      updatedAt: new Date().toISOString(),
+    };
+    setNotes((prev) => [newNote, ...prev]);
+    setActiveNoteId(newNote.id);
+  };
+
+  const handleUpdateNote = (updated: NoteItem) => {
+    setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setNotes((prev) => {
+      const next = prev.filter((n) => n.id !== noteId);
+      if (activeNoteId === noteId) {
+        setActiveNoteId(next[0]?.id ?? null);
+      }
+      return next;
+    });
+    showToast('Deleted note');
+  };
+
   const handleUploadWallpaper = async (file: File) => {
     try {
       const dataUrl = await readFileAsDataUrl(file);
@@ -536,6 +613,9 @@ export function App() {
     showToast('Wallpaper URL applied');
   };
 
+  const hasFilters =
+    searchQuery.trim().length > 0 || leadTypeFilter !== 'ALL' || cityFilter !== 'ALL';
+
   const rootVars = {
     '--dim-opacity': preferences.dimOpacity,
     '--glass-blur': `${preferences.glassBlur}px`,
@@ -547,23 +627,19 @@ export function App() {
       <div className="wallpaper-scrim" aria-hidden="true" />
 
       <TopBar
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
         boardTitle={preferences.boardTitle}
         googleSheetUrl={preferences.googleSheetUrl}
         connectedFileName={connectedFile?.name ?? null}
         hasUnsavedFileChanges={hasUnsavedFileChanges}
         isSavingFile={isSavingFile}
         onSaveConnectedFile={() => void handleSaveConnectedFile()}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        leadTypeFilter={leadTypeFilter}
-        onLeadTypeFilterChange={setLeadTypeFilter}
-        cityFilter={cityFilter}
-        cities={cities}
-        onCityFilterChange={setCityFilter}
         totalCount={leads.length}
-        filteredCount={filteredLeads.length}
         doneCount={doneCount}
         totalPipelineValue={totalPipelineValue}
+        eventsCount={calendarEvents.length}
+        notesCount={notes.length}
         activeWallpaperThumb={wallpaperSurface.thumb}
         updateAvailable={updateAvailable}
         isCheckingUpdate={isCheckingUpdate}
@@ -574,77 +650,183 @@ export function App() {
         onOpenSheetSync={() => setSheetSyncOpen(true)}
       />
 
-      {leads.length === 0 && (
-        <section className="empty-connect-bar" aria-label="Connect spreadsheet">
-          <div className="empty-connect-copy">
-            <strong>Connect your Google Sheet or Excel (.xlsx / .csv)</strong>
-            <span>
-              Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards.
-            </span>
+      {activeTab === 'kanban' && (
+        <>
+          <div className="kanban-filter-bar" role="region" aria-label="Kanban filters">
+            <label className="search-field">
+              <Search size={14} className="search-icon" aria-hidden="true" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search cards, phone, city, notes..."
+                aria-label="Search cards"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="icon-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </label>
+
+            <div className="filter-group" role="group" aria-label="Filter by lead type">
+              {LEAD_TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`filter-pill ${leadTypeFilter === option.value ? 'is-active' : ''}`}
+                  onClick={() => setLeadTypeFilter(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <select
+              className="city-select"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              aria-label="Filter by city"
+            >
+              <option value="ALL">All Cities</option>
+              {cities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+
+            {hasFilters && (
+              <span className="filter-match-count">
+                Showing {filteredLeads.length} of {leads.length}
+              </span>
+            )}
           </div>
-          <div className="empty-connect-actions">
-            <button
-              type="button"
-              className="btn-primary is-compact"
-              onClick={() => void handleConnectLocalFile()}
-            >
-              <FileSpreadsheet size={14} />
-              <span>Open Excel / CSV</span>
-            </button>
-            <button
-              type="button"
-              className="btn-glass is-compact"
-              onClick={() => setSheetSyncOpen(true)}
-            >
-              <Sheet size={14} />
-              <span>Connect Google Sheet</span>
-            </button>
-            <button
-              type="button"
-              className="btn-glass is-compact"
-              onClick={() => handleOpenNewLead('leads')}
-            >
-              <Plus size={14} />
-              <span>Add Card</span>
-            </button>
-            <button
-              type="button"
-              className="btn-ghost is-compact"
-              onClick={() => {
-                setLeads(createSampleLeads());
-                showToast('Loaded 4 fictional sample cards');
-              }}
-            >
-              <Sparkles size={14} />
-              <span>Try Sample</span>
-            </button>
-          </div>
-        </section>
+
+          {leads.length === 0 && (
+            <section className="empty-connect-bar" aria-label="Connect spreadsheet">
+              <div className="empty-connect-copy">
+                <strong>Connect your Google Sheet or Excel (.xlsx / .csv)</strong>
+                <span>
+                  Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards.
+                </span>
+              </div>
+              <div className="empty-connect-actions">
+                <button
+                  type="button"
+                  className="btn-primary is-compact"
+                  onClick={() => void handleConnectLocalFile()}
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>Open Excel / CSV</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-glass is-compact"
+                  onClick={() => setSheetSyncOpen(true)}
+                >
+                  <Sheet size={14} />
+                  <span>Connect Google Sheet</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-glass is-compact"
+                  onClick={() => handleOpenNewLead('leads')}
+                >
+                  <Plus size={14} />
+                  <span>Add Card</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost is-compact"
+                  onClick={() => {
+                    setLeads(createSampleLeads());
+                    showToast('Loaded 4 fictional sample cards');
+                  }}
+                >
+                  <Sparkles size={14} />
+                  <span>Try Sample</span>
+                </button>
+              </div>
+            </section>
+          )}
+
+          <main className="board-stage scroller" aria-label="Kanban pipeline board">
+            <div className="board-columns">
+              {KANBAN_COLUMNS.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  leads={leadsByColumn[column.id]}
+                  draggingLeadId={draggingLeadId}
+                  isDropOver={dropOverColumn === column.id}
+                  dropTargetCardId={dropTargetCardId}
+                  onSelectLead={handleSelectLead}
+                  onAddLeadInColumn={handleOpenNewLead}
+                  onCardDragStart={handleCardDragStart}
+                  onCardDragEnd={handleCardDragEnd}
+                  onCardDragOver={handleCardDragOver}
+                  onCardDrop={handleCardDrop}
+                  onColumnDragOver={handleColumnDragOver}
+                  onColumnDragLeave={handleColumnDragLeave}
+                  onColumnDrop={handleColumnDrop}
+                />
+              ))}
+            </div>
+          </main>
+        </>
       )}
 
-      <main className="board-stage scroller" aria-label="Kanban pipeline board">
-        <div className="board-columns">
-          {KANBAN_COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              leads={leadsByColumn[column.id]}
-              draggingLeadId={draggingLeadId}
-              isDropOver={dropOverColumn === column.id}
-              dropTargetCardId={dropTargetCardId}
-              onSelectLead={handleSelectLead}
-              onAddLeadInColumn={handleOpenNewLead}
-              onCardDragStart={handleCardDragStart}
-              onCardDragEnd={handleCardDragEnd}
-              onCardDragOver={handleCardDragOver}
-              onCardDrop={handleCardDrop}
-              onColumnDragOver={handleColumnDragOver}
-              onColumnDragLeave={handleColumnDragLeave}
-              onColumnDrop={handleColumnDrop}
-            />
-          ))}
-        </div>
-      </main>
+      {activeTab === 'calendar' && (
+        <main className="workspace-main">
+          <CalendarView
+            events={calendarEvents}
+            leads={leads}
+            weekStartsOn={preferences.weekStartsOn}
+            onChangeWeekStartsOn={(weekStartsOn) =>
+              setPreferences((prev) => ({ ...prev, weekStartsOn }))
+            }
+            onSaveEvent={handleSaveCalendarEvent}
+            onDeleteEvent={handleDeleteCalendarEvent}
+            onOpenLeadCard={handleSelectLead}
+          />
+        </main>
+      )}
+
+      {activeTab === 'notes' && (
+        <main className="workspace-main">
+          <NotesView
+            notes={notes}
+            activeNoteId={activeNoteId}
+            onSelectNote={setActiveNoteId}
+            onCreateNote={handleCreateNote}
+            onUpdateNote={handleUpdateNote}
+            onDeleteNote={handleDeleteNote}
+          />
+        </main>
+      )}
+
+      {activeTab === 'calculator' && (
+        <main className="workspace-main">
+          <CalculatorView
+            angleUnit={preferences.calcAngleUnit}
+            history={calcHistory}
+            onChangeAngleUnit={(calcAngleUnit) =>
+              setPreferences((prev) => ({ ...prev, calcAngleUnit }))
+            }
+            onPushHistory={(entry) => setCalcHistory((prev) => [entry, ...prev].slice(0, 50))}
+            onClearHistory={() => {
+              setCalcHistory([]);
+              showToast('Cleared calculator history');
+            }}
+          />
+        </main>
+      )}
 
       <LeadModal
         open={leadModalOpen}

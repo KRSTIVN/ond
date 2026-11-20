@@ -1,7 +1,7 @@
 {
   "name": "OND",
   "short_name": "OND",
-  "description": "Interactive glassmorphic Kanban pipeline synced with Google Sheets and Excel.",
+  "description": "Local-first glassmorphic workspace: Google Sheets & Excel Kanban board, Temporal Calendar, Markdown Notes, and Scientific Formula Calculator.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#070b14",

@@ -4,7 +4,7 @@
 
 # OND
 
-**Turn any Google Sheet or Excel workbook into a glassmorphic, wallpaper-backed Kanban desktop app.**
+**A local-first, glassmorphic desktop workspace with custom wallpapers — combining Google Sheets & Excel Kanban, Temporal Calendar, Markdown Notes, and a Scientific & Profession-Formula Calculator.**
 
 [![React 19](https://img.shields.io/badge/React-19-0f172a?style=for-the-badge&logo=react&logoColor=38bdf8)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-0f172a?style=for-the-badge&logo=typescript&logoColor=818cf8)](https://www.typescriptlang.org)
@@ -34,11 +34,14 @@ Because I build my own tools, I didn't have to settle for off-the-shelf UI: **ON
 
 | Capability | What It Does |
 | :--- | :--- |
-| **6-Stage Drag & Drop** | `Leads` → `Contacted` → `In Process` → `Waiting Approval` → `Done` → `Lost` with intra-column reordering, instant search, type/city filters, and live `$` pipeline rollups. |
+| **6-Stage Drag & Drop Kanban** | `Leads` → `Contacted` → `In Process` → `Waiting Approval` → `Done` → `Lost` with intra-column reordering, instant search, type/city filters, and live `$` pipeline rollups. |
+| **Temporal Calendar** | Full month grid (`Temporal` API + `Mon`/`Sun` week start), category-coded events (`Focus`, `Meeting`, `Personal`, `Deadline`), day agenda panel, and live **Kanban Follow-up Dates** surfaced right on the calendar grid. |
+| **Markdown Notes** | Live split / edit / preview Markdown workspace with safe AST rendering (zero `dangerouslySetInnerHTML`), clickable `- [ ]` checklists, formatting toolbar, pinning, `#tags`, instant search, and `.md` export. |
+| **Calculator & Formula Box** | Standard & Scientific modes (`DEG`/`RAD`), safe recursive-descent math parser (zero `eval`), calculation history tape, and **24 one-click Profession Formulas** across 6 disciplines (*Finance & Accounting*, *Architecture & Construction*, *Engineering & Physics*, *Healthcare & Nursing*, *Data & Statistics*, *Software & Cloud*). |
 | **Wallpaper Studio** | Curated 16:9 scenic & obsidian-glass backdrops, minimal gradients, **custom image upload** (stored in `IndexedDB` so high-res photos never hit `localStorage` limits), image URLs, plus live **Backdrop Dimming** and **Glass Blur** sliders. |
 | **Interactive Excel (`.xlsx` / `.csv`)** | Connect a local `.xlsx` or `.csv` file via the File System Access API (Chrome/Edge) to edit cards visually and **save updates directly back to disk in 1 click**. Also supports standard `.xlsx`/`.csv` import/export and TSV (`A1`) copy-paste. |
-| **Google Sheets Live Sync** | Pull from a Published-to-Web CSV link, paste cells directly, or drop in the built-in 20-line **Google Apps Script** bridge for 1-click **Pull & Push** with private Google Sheets. |
-| **1-Click Desktop App Mode** | Ships with a silent Windows launcher + Desktop/Start Menu shortcut installer that starts the local server invisibly and opens a standalone frameless desktop window (`--app` mode) with a custom taskbar icon. |
+| **Google Sheets Live Sync** | Pull from a Published-to-Web CSV link, paste cells directly, or drop in the built-in **Google Apps Script** bridge (with optional shared `API_TOKEN`) for 1-click **Pull & Push** with private Google Sheets. |
+| **1-Click Desktop App & Updater** | Silent Windows launcher + Desktop/Start Menu shortcut opens a frameless standalone window (`--app` mode), with a built-in **1-click in-app GitHub updater** in the top bar. |
 | **100% Local & Private** | No telemetry, no cloud middleman, no personal data in the repo. `.gitignore` hard-blocks `*.csv`, `*.xlsx`, `*.xls`, and `local-data/`. |
 
 ---
@@ -47,10 +50,10 @@ Because I build my own tools, I didn't have to settle for off-the-shelf UI: **ON
 
 ```mermaid
 flowchart LR
-  UI["Glassmorphic Kanban UI<br/>React 19 + Native Dialog"] --> Domain["Domain Engine<br/>Strict TS State, CSV/TSV & XLSX Parsers"]
-  Domain --> Local["Browser Persistence<br/>localStorage (Cards/Prefs) + IndexedDB (Wallpapers)"]
+  UI["OND Glassmorphic UI<br/>Kanban · Calendar · Notes · Calculator"] --> Domain["Pure Domain Engines<br/>Strict TS · Temporal · Markdown AST · Math Parser · XLSX/CSV"]
+  Domain --> Local["Local Persistence<br/>localStorage + IndexedDB (Wallpapers)"]
   Domain --> Excel["Local Excel / CSV<br/>File System Access API (1-Click Write-Back)"]
-  Domain --> Sheets["Google Sheets<br/>Published CSV Pull / 2-Way Apps Script Webhook"]
+  Domain --> Sheets["Google Sheets<br/>Published CSV / Token-Guarded Apps Script"]
 ```
 
 ---
@@ -105,8 +108,8 @@ This installs an **OND** icon on your **Desktop** and **Start Menu**:
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript (`strict: true`), Vite 6, Lucide Icons, native HTML `<dialog>` (`closedby="any"` + fallback), CSS `backdrop-filter` glassmorphism.
-- **Excel Engine**: `read-excel-file` + `write-excel-file` (browser-native `.xlsx`, 0 vulnerabilities).
-- **Desktop Runtime**: Zero-dependency Node.js static server (`server.mjs`) + silent WSH/PowerShell launcher (`scripts/`).
+- **Workspace Engines**: `temporal-polyfill` (Temporal Calendar API), custom safe Markdown AST renderer (zero `dangerouslySetInnerHTML`), safe recursive-descent scientific & formula math parser (zero `eval`), `read-excel-file` + `write-excel-file` (browser-native `.xlsx`, 0 vulnerabilities).
+- **Desktop Runtime**: Zero-dependency Node.js static server + localhost in-app updater (`server.mjs`) + silent WSH/PowerShell launcher (`scripts/`).
 
 ---
 

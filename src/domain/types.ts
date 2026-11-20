@@ -1,3 +1,36 @@
+export type WorkspaceTab = 'kanban' | 'calendar' | 'notes' | 'calculator';
+
+export type AngleUnit = 'deg' | 'rad';
+
+export interface CalcHistoryEntry {
+  readonly id: string;
+  readonly expression: string;
+  readonly result: string;
+  readonly angleUnit: AngleUnit;
+  readonly createdAt: string;
+}
+
+export type EventCategory = 'focus' | 'meeting' | 'personal' | 'deadline';
+
+export interface CalendarEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly date: string; // YYYY-MM-DD
+  readonly startTime: string | null; // HH:mm or null for all-day
+  readonly endTime: string | null; // HH:mm
+  readonly category: EventCategory;
+  readonly notes: string;
+}
+
+export interface NoteItem {
+  readonly id: string;
+  readonly title: string;
+  readonly content: string;
+  readonly tags: readonly string[];
+  readonly pinned: boolean;
+  readonly updatedAt: string;
+}
+
 export type LeadStatus =
   | 'leads'
   | 'contacted'
@@ -60,6 +93,8 @@ export interface BoardPreferences {
   appsScriptUrl: string;
   appsScriptToken: string;
   csvPublishUrl: string;
+  weekStartsOn: 1 | 7;
+  calcAngleUnit: AngleUnit;
 }
 
 export interface Result<T> {
@@ -77,8 +112,19 @@ const VALID_STATUSES: ReadonlySet<string> = new Set<LeadStatus>([
   'lost',
 ]);
 
+const VALID_EVENT_CATEGORIES: ReadonlySet<string> = new Set<EventCategory>([
+  'focus',
+  'meeting',
+  'personal',
+  'deadline',
+]);
+
 export function isLeadStatus(value: unknown): value is LeadStatus {
   return typeof value === 'string' && VALID_STATUSES.has(value);
+}
+
+export function isEventCategory(value: unknown): value is EventCategory {
+  return typeof value === 'string' && VALID_EVENT_CATEGORIES.has(value);
 }
 
 export function normalizeStatusLabel(raw: string): LeadStatus {
