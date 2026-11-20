@@ -1,7 +1,14 @@
-import { STATUS_TITLES } from './columns';
+import {
+  DEFAULT_KANBAN_COLUMNS,
+  getColumnTitle,
+  makeShortLabel,
+  matchColumnForLabel,
+  pickColumnAccent,
+  slugifyColumnId,
+} from './columns';
 import {
   normalizeLeadType,
-  normalizeStatusLabel,
+  type KanbanColumnConfig,
   type LeadCard,
   type LeadStatus,
   type Result,
@@ -20,6 +27,12 @@ export const SHEET_HEADERS = [
   'Deal Value',
   'Follow-up Date',
 ] as const;
+
+export interface ParsedSheetResult {
+  readonly leads: LeadCard[];
+  readonly columns: KanbanColumnConfig[];
+  readonly addedColumnCount: number;
+}
 
 function neutralizeFormula(value: string): string {
   if (/^[=@\t\r]/.test(value)) {
@@ -44,7 +57,10 @@ function escapeTsvCell(value: string): string {
   return safe.replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
 }
 
-export function leadToRowValues(lead: LeadCard): readonly string[] {
+export function leadToRowValues(
+  lead: LeadCard,
+  columns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+): readonly string[] {
   return [
     lead.businessName,
     lead.category,
@@ -54,21 +70,27 @@ export function leadToRowValues(lead: LeadCard): readonly string[] {
     lead.websiteUrl || 'None',
     lead.leadType,
     lead.notes,
-    STATUS_TITLES[lead.status],
+    getColumnTitle(columns, lead.status),
     lead.dealValue !== null ? String(lead.dealValue) : '',
     lead.followUpDate,
   ];
 }
 
-export function serializeLeadsToCsv(leads: readonly LeadCard[]): string {
+export function serializeLeadsToCsv(
+  leads: readonly LeadCard[],
+  columns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+): string {
   const headerLine = SHEET_HEADERS.map(escapeCsvCell).join(',');
-  const dataLines = leads.map((lead) => leadToRowValues(lead).map(escapeCsvCell).join(','));
+  const dataLines = leads.map((lead) => leadToRowValues(lead, columns).map(escapeCsvCell).join(','));
   return [headerLine, ...dataLines].join('\r\n');
 }
 
-export function serializeLeadsToTsv(leads: readonly LeadCard[]): string {
+export function serializeLeadsToTsv(
+  leads: readonly LeadCard[],
+  columns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+): string {
   const headerLine = SHEET_HEADERS.join('\t');
-  const dataLines = leads.map((lead) => leadToRowValues(lead).map(escapeTsvCell).join('\t'));
+  const dataLines = leads.map((lead) => leadToRowValues(lead, columns).map(escapeTsvCell).join('\t'));
   return [headerLine, ...dataLines].join('\n');
 }
 
@@ -160,7 +182,9 @@ function parseNumberOrNull(raw: string): number | null {
 export function parseLeadsFromMatrix(
   matrix: readonly (readonly string[])[],
   existingLeads: readonly LeadCard[],
-): Result<LeadCard[]> {
+  currentColumns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+  autoCreateColumns = true,
+): Result<ParsedSheetResult> {
   if (matrix.length < 2) {
     return { ok: false, error: 'Expected a header row plus at least one data row.' };
   }
@@ -192,6 +216,11 @@ export function parseLeadsFromMatrix(
   const idxDealValue = findColumnIndex(headers, ['deal value', 'value', 'budget', 'price', 'amount']);
   const idxFollowUp = findColumnIndex(headers, ['follow-up date', 'follow up', 'followup', 'due']);
 
+  const workingColumns: KanbanColumnConfig[] =
+    currentColumns.length > 0 ? [...currentColumns] : [...DEFAULT_KANBAN_COLUMNS];
+  const defaultColumnId = workingColumns[0]!.id;
+  let addedColumnCount = 0;
+
   const existingByName = new Map<string, LeadCard[]>();
   for (const lead of existingLeads) {
     const key = lead.businessName.trim().toLowerCase();
@@ -202,14 +231,7 @@ export function parseLeadsFromMatrix(
 
   const usedIds = new Set<string>();
   const now = new Date().toISOString();
-  const statusOrderCounters: Record<LeadStatus, number> = {
-    leads: 0,
-    contacted: 0,
-    in_process: 0,
-    waiting_approval: 0,
-    done: 0,
-    lost: 0,
-  };
+  const statusOrderCounters = new Map<string, number>();
 
   const parsedLeads: LeadCard[] = [];
 
@@ -225,13 +247,39 @@ export function parseLeadsFromMatrix(
         : `lead-${crypto.randomUUID().slice(0, 8)}`;
     usedIds.add(candidateId);
 
-    const rawStatus = idxStatus !== -1 ? (row[idxStatus] ?? '') : '';
-    const status: LeadStatus = rawStatus.trim()
-      ? normalizeStatusLabel(rawStatus)
-      : (existing?.status ?? 'leads');
+    const rawStatus = idxStatus !== -1 ? (row[idxStatus] ?? '').trim() : '';
+    let status: LeadStatus = existing?.status ?? defaultColumnId;
 
-    const order = statusOrderCounters[status];
-    statusOrderCounters[status] += 1;
+    if (rawStatus) {
+      const matched = matchColumnForLabel(rawStatus, workingColumns);
+      if (matched) {
+        status = matched.id;
+      } else if (autoCreateColumns) {
+        const newId = slugifyColumnId(rawStatus);
+        const already = workingColumns.find((c) => c.id === newId);
+        if (already) {
+          status = already.id;
+        } else {
+          const newCol: KanbanColumnConfig = {
+            id: newId,
+            title: rawStatus,
+            shortLabel: makeShortLabel(rawStatus),
+            accent: pickColumnAccent(workingColumns.length),
+            isDone: /^(done|won|shipped|published|completed)$/i.test(newId),
+          };
+          workingColumns.push(newCol);
+          addedColumnCount += 1;
+          status = newCol.id;
+        }
+      } else {
+        status = defaultColumnId;
+      }
+    } else if (!workingColumns.some((c) => c.id === status)) {
+      status = defaultColumnId;
+    }
+
+    const order = statusOrderCounters.get(status) ?? 0;
+    statusOrderCounters.set(status, order + 1);
 
     parsedLeads.push({
       id: candidateId,
@@ -264,13 +312,22 @@ export function parseLeadsFromMatrix(
     return { ok: false, error: 'No valid data rows were found.' };
   }
 
-  return { ok: true, data: parsedLeads };
+  return {
+    ok: true,
+    data: {
+      leads: parsedLeads,
+      columns: workingColumns,
+      addedColumnCount,
+    },
+  };
 }
 
 export function parseLeadsFromText(
   text: string,
   existingLeads: readonly LeadCard[],
-): Result<LeadCard[]> {
+  currentColumns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+  autoCreateColumns = true,
+): Result<ParsedSheetResult> {
   const trimmed = text.trim();
   if (!trimmed) {
     return { ok: false, error: 'Input is empty. Provide CSV or TSV data from Google Sheets or Excel.' };
@@ -279,7 +336,7 @@ export function parseLeadsFromText(
   const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? '';
   const delimiter: ',' | '\t' = firstLine.includes('\t') ? '\t' : ',';
   const matrix = parseDelimitedText(trimmed, delimiter);
-  return parseLeadsFromMatrix(matrix, existingLeads);
+  return parseLeadsFromMatrix(matrix, existingLeads, currentColumns, autoCreateColumns);
 }
 
 export function resolveGoogleSheetCsvUrl(rawUrl: string): string | null {

@@ -1,8 +1,8 @@
 import { readSheet } from 'read-excel-file/browser';
 import writeXlsxFile, { type Row, type SheetData } from 'write-excel-file/browser';
-import { STATUS_TITLES } from './columns';
-import { parseLeadsFromMatrix, SHEET_HEADERS } from './csvSync';
-import type { LeadCard, Result } from './types';
+import { DEFAULT_KANBAN_COLUMNS, getColumnTitle } from './columns';
+import { parseLeadsFromMatrix, SHEET_HEADERS, type ParsedSheetResult } from './csvSync';
+import type { KanbanColumnConfig, LeadCard, Result } from './types';
 
 function cellToString(cell: unknown): string {
   if (cell === null || cell === undefined) return '';
@@ -15,14 +15,16 @@ function cellToString(cell: unknown): string {
 export async function parseExcelFile(
   file: File,
   existingLeads: readonly LeadCard[],
-): Promise<Result<LeadCard[]>> {
+  currentColumns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+  autoCreateColumns = true,
+): Promise<Result<ParsedSheetResult>> {
   try {
     const rawRows = await readSheet(file);
     const matrix: string[][] = rawRows
       .map((row) => row.map((cell) => cellToString(cell)))
       .filter((row) => row.some((value) => value.length > 0));
 
-    return parseLeadsFromMatrix(matrix, existingLeads);
+    return parseLeadsFromMatrix(matrix, existingLeads, currentColumns, autoCreateColumns);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to parse Excel workbook.';
     return {
@@ -32,7 +34,10 @@ export async function parseExcelFile(
   }
 }
 
-function buildSheetData(leads: readonly LeadCard[]): SheetData {
+function buildSheetData(
+  leads: readonly LeadCard[],
+  columns: readonly KanbanColumnConfig[],
+): SheetData {
   const headerRow: Row = SHEET_HEADERS.map((title) => ({
     value: title,
     fontWeight: 'bold' as const,
@@ -47,7 +52,7 @@ function buildSheetData(leads: readonly LeadCard[]): SheetData {
     { value: lead.websiteUrl || 'None', type: String },
     { value: lead.leadType, type: String },
     { value: lead.notes, type: String },
-    { value: STATUS_TITLES[lead.status], type: String },
+    { value: getColumnTitle(columns, lead.status), type: String },
     lead.dealValue !== null
       ? { value: lead.dealValue, type: Number }
       : { value: '', type: String },
@@ -71,8 +76,11 @@ const EXCEL_COLUMNS = [
   { width: 16 },
 ];
 
-export async function buildExcelBlob(leads: readonly LeadCard[]): Promise<Blob> {
-  const sheetData = buildSheetData(leads);
+export async function buildExcelBlob(
+  leads: readonly LeadCard[],
+  columns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
+): Promise<Blob> {
+  const sheetData = buildSheetData(leads, columns);
   return writeXlsxFile(sheetData, {
     columns: EXCEL_COLUMNS,
     sheet: 'Kanban Leads',
@@ -82,8 +90,9 @@ export async function buildExcelBlob(leads: readonly LeadCard[]): Promise<Blob> 
 export async function downloadExcelFile(
   leads: readonly LeadCard[],
   fileName = 'ond-leads.xlsx',
+  columns: readonly KanbanColumnConfig[] = DEFAULT_KANBAN_COLUMNS,
 ): Promise<void> {
-  const sheetData = buildSheetData(leads);
+  const sheetData = buildSheetData(leads, columns);
   await writeXlsxFile(sheetData, {
     columns: EXCEL_COLUMNS,
     sheet: 'Kanban Leads',

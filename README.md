@@ -4,11 +4,12 @@
 
 # OND
 
-**A local-first, glassmorphic desktop workspace with custom wallpapers — combining Google Sheets & Excel Kanban, Temporal Calendar, Markdown Notes, and a Scientific & Profession-Formula Calculator.**
+**A local-first, glassmorphic desktop workspace with custom wallpapers — combining customizable Google Sheets & Excel Kanban, Temporal Calendar, Markdown Notes, and a Scientific & Profession-Formula Calculator.**
 
 [![React 19](https://img.shields.io/badge/React-19-0f172a?style=for-the-badge&logo=react&logoColor=38bdf8)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-0f172a?style=for-the-badge&logo=typescript&logoColor=818cf8)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-6-0f172a?style=for-the-badge&logo=vite&logoColor=fbbf24)](https://vite.dev)
+[![Windows & macOS](https://img.shields.io/badge/Desktop-Windows_%26_macOS-0f172a?style=for-the-badge&logo=apple&logoColor=f8fafc)](#one-click-desktop-app-windows--macos)
 [![Excel & Sheets](https://img.shields.io/badge/Sync-Sheets_%26_Excel-0f172a?style=for-the-badge&logo=googlesheets&logoColor=34d399)](#spreadsheet-sync)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f172a?style=for-the-badge&logoColor=f8fafc)](LICENSE)
 
@@ -34,14 +35,13 @@ Because I build my own tools, I didn't have to settle for off-the-shelf UI: **ON
 
 | Capability | What It Does |
 | :--- | :--- |
-| **6-Stage Drag & Drop Kanban** | `Leads` → `Contacted` → `In Process` → `Waiting Approval` → `Done` → `Lost` with intra-column reordering, instant search, type/city filters, and live `$` pipeline rollups. |
-| **Temporal Calendar** | Full month grid (`Temporal` API + `Mon`/`Sun` week start), category-coded events (`Focus`, `Meeting`, `Personal`, `Deadline`), day agenda panel, and live **Kanban Follow-up Dates** surfaced right on the calendar grid. |
-| **Markdown Notes** | Live split / edit / preview Markdown workspace with safe AST rendering (zero `dangerouslySetInnerHTML`), clickable `- [ ]` checklists, formatting toolbar, pinning, `#tags`, instant search, and `.md` export. |
-| **Calculator & Formula Box** | Standard & Scientific modes (`DEG`/`RAD`), safe recursive-descent math parser (zero `eval`), calculation history tape, and **24 one-click Profession Formulas** across 6 disciplines (*Finance & Accounting*, *Architecture & Construction*, *Engineering & Physics*, *Healthcare & Nursing*, *Data & Statistics*, *Software & Cloud*). |
-| **Wallpaper Studio** | Curated 16:9 scenic & obsidian-glass backdrops, minimal gradients, **custom image upload** (stored in `IndexedDB` so high-res photos never hit `localStorage` limits), image URLs, plus live **Backdrop Dimming** and **Glass Blur** sliders. |
-| **Interactive Excel (`.xlsx` / `.csv`)** | Connect a local `.xlsx` or `.csv` file via the File System Access API (Chrome/Edge) to edit cards visually and **save updates directly back to disk in 1 click**. Also supports standard `.xlsx`/`.csv` import/export and TSV (`A1`) copy-paste. |
-| **Google Sheets Live Sync** | Pull from a Published-to-Web CSV link, paste cells directly, or drop in the built-in **Google Apps Script** bridge (with optional shared `API_TOKEN`) for 1-click **Pull & Push** with private Google Sheets. |
-| **1-Click Desktop App & Updater** | Silent Windows launcher + Desktop/Start Menu shortcut opens a frameless standalone window (`--app` mode), with a built-in **1-click in-app GitHub updater** in the top bar. |
+| **Customizable Kanban & Templates** | Ships with the default **6-Stage Sales & Leads Pipeline** (`Leads` → `Contacted` → `In Process` → `Waiting Approval` → `Done` → `Lost`), plus 1-click templates (*Product Sprint*, *Content Studio*, *Personal Notion Flow*), full manual column editing (add, rename, recolor, reorder, delete), and **auto-column creation from uploaded spreadsheet `Status` values**. |
+| **Temporal Calendar** | Full month grid (`Temporal` API + `Mon`/`Sun` week start), category-coded events (`Focus`, `Meeting`, `Personal`, `Deadline`), day agenda panel, `.ics` import/export (Apple Calendar, Google Calendar, Outlook), and live **Kanban Follow-up Dates** on the grid. |
+| **Markdown Notes** | Live split / edit / preview Markdown workspace with safe AST rendering (zero `dangerouslySetInnerHTML`), clickable `- [ ]` checklists, formatting toolbar, pinning, `#tags`, search, and `.md` import/export. |
+| **Calculator & Formula Box** | Standard & Scientific modes (`DEG`/`RAD`), safe recursive-descent math parser (zero `eval`), calculation history tape, and **24 one-click Profession Formulas** across 6 disciplines (*Finance*, *Architecture*, *Engineering*, *Healthcare*, *Data & Statistics*, *Software & Cloud*). |
+| **Wallpaper Studio** | Curated high-contrast wallpapers — including **3 Poison Dart Frog on pure black studio backdrops** (*Cobalt Azureus*, *Golden Banded*, *Strawberry*), scenic photography, obsidian dark glass, minimal gradients, custom `IndexedDB` uploads, image URLs, and live **Backdrop Dimming** + **Glass Blur** sliders. |
+| **Local + Google Sign-In Sync** | Save Calendar & Notes locally (`.json` live file write-back, `.ics`, `.md`), sync Kanban with local `.xlsx`/`.csv` files or Google Sheets, OR sign in with your own **Google OAuth Client ID** to sync directly with **Google Calendar** and **Google Drive** (tokens stay in memory only). |
+| **Cross-Platform Desktop App & Updater** | 1-click native-feel standalone window launchers for both **Windows** (`.lnk`) and **macOS** (`~/Applications/OND.app`), plus a built-in **1-click in-app GitHub updater**. |
 | **100% Local & Private** | No telemetry, no cloud middleman, no personal data in the repo. `.gitignore` hard-blocks `*.csv`, `*.xlsx`, `*.xls`, and `local-data/`. |
 
 ---
@@ -50,10 +50,10 @@ Because I build my own tools, I didn't have to settle for off-the-shelf UI: **ON
 
 ```mermaid
 flowchart LR
-  UI["OND Glassmorphic UI<br/>Kanban · Calendar · Notes · Calculator"] --> Domain["Pure Domain Engines<br/>Strict TS · Temporal · Markdown AST · Math Parser · XLSX/CSV"]
-  Domain --> Local["Local Persistence<br/>localStorage + IndexedDB (Wallpapers)"]
+  UI["OND Glassmorphic UI<br/>Kanban · Calendar · Notes · Calculator"] --> Domain["Pure Domain Engines<br/>Strict TS · Temporal · Markdown AST · Math Parser · XLSX/CSV/ICS"]
+  Domain --> Local["Local Persistence<br/>localStorage + IndexedDB (Wallpapers) + JSON/ICS/MD"]
   Domain --> Excel["Local Excel / CSV<br/>File System Access API (1-Click Write-Back)"]
-  Domain --> Sheets["Google Sheets<br/>Published CSV / Token-Guarded Apps Script"]
+  Domain --> Google["Google Workspace<br/>Sheets (CSV / Apps Script) · Calendar & Drive (OAuth2 GIS)"]
 ```
 
 ---
@@ -68,51 +68,53 @@ npm run build
 npm start
 ```
 
-Open **`http://127.0.0.1:5173/`** and click **Sheets / Excel** to connect your spreadsheet (or click **Try Sample** to preview with fictional demo cards).
+Open **`http://127.0.0.1:5173/`** and click **Sync & Backup** to connect your spreadsheet, Calendar, or Notes (or click **Try Sample** to preview with fictional demo cards).
 
-### Install as a 1-Click Windows Desktop App
+## One-Click Desktop App (Windows & macOS)
 
-After building (`npm run build`), run:
-
+### Windows
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-shortcut.ps1
+npm run install:win
 ```
+Creates an **OND** shortcut on your **Desktop** and **Start Menu**. Double-click once to launch silently in standalone desktop app mode (`--app`), or right-click → **Pin to taskbar**.
 
-This installs an **OND** icon on your **Desktop** and **Start Menu**:
-- Double-click once → silently boots `server.mjs` (if not already running) with zero console flash → opens **OND** in a clean standalone desktop window.
-- Right-click the shortcut → **Pin to taskbar** for single-click access.
+### macOS
+```bash
+npm run install:mac
+```
+Creates a native **`~/Applications/OND.app`** bundle (with `AppIcon.icns`). Open via Spotlight (`OND`), Finder, or drag **OND.app** onto your Dock. It silently boots `server.mjs` and opens Chrome / Brave / Edge in standalone `--app` mode (falling back to Safari if none are installed).
 
 ---
 
 ## Spreadsheet Sync
 
-**OND** auto-maps flexible column headers from any Google Sheet or Excel workbook and preserves your Kanban stages across re-imports:
+**OND** auto-maps flexible column headers from any Google Sheet or Excel workbook, preserves existing card stages across re-imports, and can automatically create custom Kanban columns from any `Status` values in your sheet:
 
 | Spreadsheet Column | Recognized Header Aliases |
 | :--- | :--- |
 | **Card Title** *(required)* | `Business Name`, `Business`, `Company`, `Client`, `Title`, `Name` |
-| **Stage** | `Status`, `Stage`, `Column`, `Phase` *(auto-maps to the 6 columns)* |
+| **Stage** | `Status`, `Stage`, `Column`, `Phase` *(matches existing stages or auto-creates custom columns)* |
 | **Category** | `Category`, `Industry`, `Niche`, `Service` |
 | **Location** | `Address`, `Location`, `City` |
 | **Contact** | `Phone Number` / `Phone`, `Email`, `Website URL` / `Website` |
 | **Tag & Value** | `Lead Type` / `Type` / `Tag`, `Deal Value` / `Value` / `Budget`, `Follow-up Date` |
 | **Notes** | `Notes`, `Note`, `Comments`, `Description` |
 
-### Connecting a Private Google Sheet (2-Way Sync)
-1. Click **Sheets / Excel** inside the app → expand **View Apps Script** → **Copy Code**.
-2. In your Google Sheet, open **Extensions → Apps Script**, paste the snippet, and deploy as a **Web App** (*Execute as: Me*, *Who has access: Anyone*).
-3. Paste the deployed `/exec` URL into **OND** for 1-click **Pull** and **Push**.
+### Syncing Calendar & Notes with Google Sign-In
+1. Click **Sync & Backup → Calendar & Notes (Local & Google)**.
+2. Use **Local Backup** (`.json` / `.ics` / `.md`) for 100% offline backups, **or** paste your own Google Cloud Web OAuth Client ID (with `http://127.0.0.1:5173` in Authorized JavaScript origins) and click **Sign in with Google** to Pull/Push Google Calendar events and back up Notes + Calendar to Google Drive.
 
 ---
 
-## Tech Stack
+## Tech Stack & Credits
 
 - **Frontend**: React 19, TypeScript (`strict: true`), Vite 6, Lucide Icons, native HTML `<dialog>` (`closedby="any"` + fallback), CSS `backdrop-filter` glassmorphism.
-- **Workspace Engines**: `temporal-polyfill` (Temporal Calendar API), custom safe Markdown AST renderer (zero `dangerouslySetInnerHTML`), safe recursive-descent scientific & formula math parser (zero `eval`), `read-excel-file` + `write-excel-file` (browser-native `.xlsx`, 0 vulnerabilities).
-- **Desktop Runtime**: Zero-dependency Node.js static server + localhost in-app updater (`server.mjs`) + silent WSH/PowerShell launcher (`scripts/`).
+- **Workspace Engines**: `temporal-polyfill`, custom safe Markdown AST renderer, safe recursive-descent scientific & formula math parser, `read-excel-file` + `write-excel-file` (0 vulnerabilities), RFC-5545 `.ics` serializer/parser, on-demand Google Identity Services OAuth2.
+- **Desktop Runtime**: Zero-dependency Node.js static server + localhost in-app updater (`server.mjs`), silent Windows WSH/PowerShell launcher, and native macOS `.app` bundle installer.
+- **Poison Dart Frog Photography Credits** *(re-framed onto black studio backdrops)*: *Dendrobates tinctorius azureus* (CC BY 3.0), *Dendrobates leucomelas* (CC BY 3.0), and *Oophaga pumilio* (CC BY-SA 3.0) via Wikimedia Commons.
 
 ---
 
 ## License
 
-[MIT](LICENSE) — fork it, customize the columns or wallpapers, and make it yours.
+[MIT](LICENSE) — fork it, customize the templates or wallpapers, and make it yours.

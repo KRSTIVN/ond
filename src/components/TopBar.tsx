@@ -204,10 +204,10 @@ export function TopBar({
           type="button"
           className="btn-glass"
           onClick={onOpenSheetSync}
-          title="Connect Google Sheets or Excel (.xlsx / .csv)"
+          title="Sync Google Sheets, Excel, Calendar, and Notes (Local & Google Sign-In)"
         >
           <Sheet size={15} />
-          <span>Sheets / Excel</span>
+          <span>Sync &amp; Backup</span>
         </button>
 
         {activeTab === 'kanban' && (

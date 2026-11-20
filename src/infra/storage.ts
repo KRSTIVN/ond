@@ -1,11 +1,12 @@
+import { DEFAULT_KANBAN_COLUMNS, makeShortLabel } from '../domain/columns';
 import {
   isEventCategory,
-  isLeadStatus,
   normalizeLeadType,
   sanitizeHttpUrl,
   type BoardPreferences,
   type CalcHistoryEntry,
   type CalendarEvent,
+  type KanbanColumnConfig,
   type LeadCard,
   type NoteItem,
 } from '../domain/types';
@@ -13,6 +14,7 @@ import { normalizeWallpaperId } from '../domain/wallpapers';
 
 const LEADS_STORAGE_KEY = 'ond_kanban_cards_v1';
 const LEGACY_LEADS_KEYS = ['sheet_kanban_cards_v1', 'pr_leads_kanban_cards_v1'] as const;
+const COLUMNS_STORAGE_KEY = 'ond_kanban_columns_v1';
 const PREFS_STORAGE_KEY = 'ond_kanban_prefs_v1';
 const LEGACY_PREFS_KEYS = ['sheet_kanban_prefs_v1', 'pr_leads_kanban_prefs_v1'] as const;
 const EVENTS_STORAGE_KEY = 'ond_calendar_events_v1';
@@ -35,6 +37,7 @@ export const DEFAULT_PREFERENCES: BoardPreferences = {
   appsScriptUrl: '',
   appsScriptToken: '',
   csvPublishUrl: '',
+  googleClientId: '',
   weekStartsOn: 1,
   calcAngleUnit: 'deg',
 };
@@ -48,6 +51,7 @@ function parseStoredLead(raw: unknown, fallbackOrder: number): LeadCard | null {
   if (typeof raw.id !== 'string' || typeof raw.businessName !== 'string') return null;
 
   const now = new Date().toISOString();
+  const status = typeof raw.status === 'string' && raw.status.trim() ? raw.status.trim() : 'leads';
   return {
     id: raw.id,
     businessName: raw.businessName,
@@ -58,13 +62,34 @@ function parseStoredLead(raw: unknown, fallbackOrder: number): LeadCard | null {
     websiteUrl: typeof raw.websiteUrl === 'string' ? raw.websiteUrl : '',
     leadType: typeof raw.leadType === 'string' ? normalizeLeadType(raw.leadType) : 'Needs Website',
     notes: typeof raw.notes === 'string' ? raw.notes : '',
-    status: isLeadStatus(raw.status) ? raw.status : 'leads',
+    status,
     dealValue:
       typeof raw.dealValue === 'number' && Number.isFinite(raw.dealValue) ? raw.dealValue : null,
     followUpDate: typeof raw.followUpDate === 'string' ? raw.followUpDate : '',
     order: typeof raw.order === 'number' && Number.isFinite(raw.order) ? raw.order : fallbackOrder,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : now,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : now,
+  };
+}
+
+function parseStoredColumn(raw: unknown): KanbanColumnConfig | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.id !== 'string' || !raw.id.trim() || typeof raw.title !== 'string' || !raw.title.trim()) {
+    return null;
+  }
+  const title = raw.title.trim();
+  return {
+    id: raw.id.trim(),
+    title,
+    shortLabel:
+      typeof raw.shortLabel === 'string' && raw.shortLabel.trim()
+        ? raw.shortLabel.trim()
+        : makeShortLabel(title),
+    accent:
+      typeof raw.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw.accent)
+        ? raw.accent
+        : '#818cf8',
+    isDone: Boolean(raw.isDone),
   };
 }
 
@@ -160,6 +185,29 @@ export function saveLeads(leads: readonly LeadCard[]): void {
     window.localStorage.setItem(LEADS_STORAGE_KEY, JSON.stringify(leads));
   } catch (error) {
     console.error('Failed to persist leads to localStorage:', error);
+  }
+}
+
+export function loadColumns(): KanbanColumnConfig[] {
+  try {
+    const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+    if (!raw) return [...DEFAULT_KANBAN_COLUMNS];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_KANBAN_COLUMNS];
+    const valid = parsed
+      .map((item) => parseStoredColumn(item))
+      .filter((item): item is KanbanColumnConfig => item !== null);
+    return valid.length > 0 ? valid : [...DEFAULT_KANBAN_COLUMNS];
+  } catch {
+    return [...DEFAULT_KANBAN_COLUMNS];
+  }
+}
+
+export function saveColumns(columns: readonly KanbanColumnConfig[]): void {
+  try {
+    window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columns));
+  } catch (error) {
+    console.error('Failed to persist columns to localStorage:', error);
   }
 }
 
@@ -275,6 +323,7 @@ export function loadPreferences(): BoardPreferences {
         typeof parsed.csvPublishUrl === 'string'
           ? (sanitizeHttpUrl(parsed.csvPublishUrl) ?? '')
           : '',
+      googleClientId: typeof parsed.googleClientId === 'string' ? parsed.googleClientId : '',
       weekStartsOn: parsed.weekStartsOn === 7 ? 7 : 1,
       calcAngleUnit: parsed.calcAngleUnit === 'rad' ? 'rad' : 'deg',
     };

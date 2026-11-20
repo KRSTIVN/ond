@@ -31,13 +31,7 @@ export interface NoteItem {
   readonly updatedAt: string;
 }
 
-export type LeadStatus =
-  | 'leads'
-  | 'contacted'
-  | 'in_process'
-  | 'waiting_approval'
-  | 'done'
-  | 'lost';
+export type LeadStatus = string;
 
 export type LeadType = 'Needs Website' | 'Update Candidate' | 'Other';
 
@@ -60,10 +54,18 @@ export interface LeadCard {
 }
 
 export interface KanbanColumnConfig {
-  readonly id: LeadStatus;
+  readonly id: string;
   readonly title: string;
   readonly shortLabel: string;
   readonly accent: string;
+  readonly isDone?: boolean;
+}
+
+export interface KanbanTemplate {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly columns: readonly KanbanColumnConfig[];
 }
 
 export type WallpaperPreset =
@@ -93,6 +95,7 @@ export interface BoardPreferences {
   appsScriptUrl: string;
   appsScriptToken: string;
   csvPublishUrl: string;
+  googleClientId: string;
   weekStartsOn: 1 | 7;
   calcAngleUnit: AngleUnit;
 }
@@ -103,15 +106,6 @@ export interface Result<T> {
   readonly error?: string;
 }
 
-const VALID_STATUSES: ReadonlySet<string> = new Set<LeadStatus>([
-  'leads',
-  'contacted',
-  'in_process',
-  'waiting_approval',
-  'done',
-  'lost',
-]);
-
 const VALID_EVENT_CATEGORIES: ReadonlySet<string> = new Set<EventCategory>([
   'focus',
   'meeting',
@@ -119,23 +113,8 @@ const VALID_EVENT_CATEGORIES: ReadonlySet<string> = new Set<EventCategory>([
   'deadline',
 ]);
 
-export function isLeadStatus(value: unknown): value is LeadStatus {
-  return typeof value === 'string' && VALID_STATUSES.has(value);
-}
-
 export function isEventCategory(value: unknown): value is EventCategory {
   return typeof value === 'string' && VALID_EVENT_CATEGORIES.has(value);
-}
-
-export function normalizeStatusLabel(raw: string): LeadStatus {
-  const key = raw.trim().toLowerCase().replace(/[\s-]+/g, '_');
-  if (isLeadStatus(key)) return key;
-  if (key.includes('contact')) return 'contacted';
-  if (key.includes('process') || key.includes('progress')) return 'in_process';
-  if (key.includes('wait') || key.includes('approv')) return 'waiting_approval';
-  if (key.includes('done') || key.includes('won') || key.includes('closed')) return 'done';
-  if (key.includes('lost') || key.includes('dead') || key.includes('declin')) return 'lost';
-  return 'leads';
 }
 
 export function normalizeLeadType(raw: string): LeadType {

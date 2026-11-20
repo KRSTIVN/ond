@@ -8,7 +8,7 @@ import {
   Plus,
   Square,
 } from 'lucide-react';
-import { STATUS_TITLES } from '../../domain/columns';
+import { getColumnTitle, isDoneColumn } from '../../domain/columns';
 import {
   buildMonthGrid,
   compareCalendarEvents,
@@ -18,12 +18,13 @@ import {
   getWeekdayLabels,
   isValidPlainDate,
 } from '../../domain/calendar/temporal';
-import type { CalendarEvent, LeadCard } from '../../domain/types';
+import type { CalendarEvent, KanbanColumnConfig, LeadCard } from '../../domain/types';
 import { EventDialog } from './EventDialog';
 
 interface CalendarViewProps {
   readonly events: readonly CalendarEvent[];
   readonly leads: readonly LeadCard[];
+  readonly columns: readonly KanbanColumnConfig[];
   readonly weekStartsOn: 1 | 7;
   readonly onChangeWeekStartsOn: (start: 1 | 7) => void;
   readonly onSaveEvent: (event: CalendarEvent) => void;
@@ -34,6 +35,7 @@ interface CalendarViewProps {
 export function CalendarView({
   events,
   leads,
+  columns,
   weekStartsOn,
   onChangeWeekStartsOn,
   onSaveEvent,
@@ -166,7 +168,7 @@ export function CalendarView({
                     .slice(0, Math.max(0, 3 - Math.min(2, dayEvents.length)))
                     .map((lead) => (
                       <div key={lead.id} className="cell-chip is-followup">
-                        {lead.status === 'done' ? (
+                        {isDoneColumn(columns, lead.status) ? (
                           <CheckSquare size={10} />
                         ) : (
                           <Square size={10} />
@@ -249,7 +251,7 @@ export function CalendarView({
                   onClick={() => onOpenLeadCard(lead)}
                 >
                   <div className="agenda-followup-row">
-                    {lead.status === 'done' ? (
+                    {isDoneColumn(columns, lead.status) ? (
                       <CheckSquare size={14} className="text-emerald" />
                     ) : (
                       <Square size={14} className="text-indigo" />
@@ -257,7 +259,7 @@ export function CalendarView({
                     <strong className="agenda-item-title">{lead.businessName}</strong>
                   </div>
                   <span className="agenda-followup-sub">
-                    Stage: {STATUS_TITLES[lead.status]} · Click to edit card
+                    Stage: {getColumnTitle(columns, lead.status)} · Click to edit card
                   </span>
                 </button>
               ))}

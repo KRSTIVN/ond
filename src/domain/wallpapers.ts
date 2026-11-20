@@ -26,6 +26,27 @@ export const WALLPAPER_PRESETS: readonly WallpaperPreset[] = [
     src: '/wallpapers/obsidian-glass.jpg',
   },
   {
+    id: 'dart-frog-azureus',
+    name: 'Cobalt Dart Frog',
+    tag: 'Dart Frog',
+    kind: 'image',
+    src: '/wallpapers/dart-frog-azureus.jpg',
+  },
+  {
+    id: 'dart-frog-golden',
+    name: 'Golden Banded Frog',
+    tag: 'Dart Frog',
+    kind: 'image',
+    src: '/wallpapers/dart-frog-golden.jpg',
+  },
+  {
+    id: 'dart-frog-strawberry',
+    name: 'Strawberry Dart Frog',
+    tag: 'Dart Frog',
+    kind: 'image',
+    src: '/wallpapers/dart-frog-strawberry.jpg',
+  },
+  {
     id: 'midnight-ocean',
     name: 'Midnight Ocean',
     tag: 'Minimal',

@@ -7,9 +7,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { KANBAN_COLUMNS } from '../domain/columns';
 import {
   normalizeWebsiteHref,
+  type KanbanColumnConfig,
   type LeadCard,
   type LeadStatus,
   type LeadType,
@@ -34,6 +34,7 @@ export interface LeadDraft {
 interface LeadModalProps {
   readonly open: boolean;
   readonly lead: LeadCard | null;
+  readonly columns: readonly KanbanColumnConfig[];
   readonly defaultStatus: LeadStatus;
   readonly onClose: () => void;
   readonly onSave: (draft: LeadDraft) => void;
@@ -76,6 +77,7 @@ function createInitialDraft(lead: LeadCard | null, defaultStatus: LeadStatus): L
 export function LeadModal({
   open,
   lead,
+  columns,
   defaultStatus,
   onClose,
   onSave,
@@ -159,7 +161,7 @@ export function LeadModal({
 
       <form className="modal-body scroller" onSubmit={handleSubmit}>
         <div className="stage-stepper" role="radiogroup" aria-label="Pipeline stage">
-          {KANBAN_COLUMNS.map((col) => {
+          {columns.map((col) => {
             const active = draft.status === col.id;
             return (
               <button

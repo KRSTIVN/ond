@@ -5,8 +5,21 @@ import {
   type CSSProperties,
   type DragEvent,
 } from 'react';
-import { FileSpreadsheet, Plus, Search, Sheet, Sparkles, X } from 'lucide-react';
-import { KANBAN_COLUMNS, STATUS_TITLES } from './domain/columns';
+import {
+  FileSpreadsheet,
+  LayoutTemplate,
+  Plus,
+  Search,
+  Sheet,
+  Sparkles,
+  X,
+} from 'lucide-react';
+import {
+  getColumnTitle,
+  isDoneColumn,
+  isLostColumn,
+} from './domain/columns';
+import type { ParsedSheetResult } from './domain/csvSync';
 import { createSampleLeads } from './domain/sampleData';
 import {
   extractCity,
@@ -14,6 +27,7 @@ import {
   type BoardPreferences,
   type CalcHistoryEntry,
   type CalendarEvent,
+  type KanbanColumnConfig,
   type LeadCard,
   type LeadStatus,
   type NoteItem,
@@ -25,26 +39,32 @@ import {
   findWallpaperPreset,
   WALLPAPER_PRESETS,
 } from './domain/wallpapers';
+import type { WorkspaceSyncPayload } from './domain/workspaceSync';
 import {
   connectLocalSpreadsheet,
   writeLeadsToConnectedFile,
+  type ConnectedBackupFile,
   type ConnectedSpreadsheetFile,
 } from './infra/fileBridge';
+import type { GoogleSession } from './infra/googleSync';
 import {
   clearCustomWallpaperDataUrl,
   loadCalcHistory,
   loadCalendarEvents,
+  loadColumns,
   loadCustomWallpaperDataUrl,
   loadLeads,
   loadNotes,
   loadPreferences,
   saveCalcHistory,
   saveCalendarEvents,
+  saveColumns,
   saveCustomWallpaperDataUrl,
   saveLeads,
   saveNotes,
   savePreferences,
 } from './infra/storage';
+import { BoardTemplatesModal } from './components/BoardTemplatesModal';
 import { CalculatorView } from './components/calculator/CalculatorView';
 import { CalendarView } from './components/calendar/CalendarView';
 import { KanbanColumn } from './components/KanbanColumn';
@@ -116,6 +136,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 export function App() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('kanban');
+  const [columns, setColumns] = useState<KanbanColumnConfig[]>(() => loadColumns());
   const [leads, setLeads] = useState<LeadCard[]>(() => loadLeads());
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadCalendarEvents());
   const [notes, setNotes] = useState<NoteItem[]>(() => loadNotes());
@@ -125,8 +146,10 @@ export function App() {
   const [customUploadDataUrl, setCustomUploadDataUrl] = useState<string | null>(null);
 
   const [connectedFile, setConnectedFile] = useState<ConnectedSpreadsheetFile | null>(null);
+  const [connectedBackupFile, setConnectedBackupFile] = useState<ConnectedBackupFile | null>(null);
   const [hasUnsavedFileChanges, setHasUnsavedFileChanges] = useState(false);
   const [isSavingFile, setIsSavingFile] = useState(false);
+  const [googleSession, setGoogleSession] = useState<GoogleSession | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [leadTypeFilter, setLeadTypeFilter] = useState<LeadTypeFilter>('ALL');
@@ -138,13 +161,21 @@ export function App() {
 
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<LeadCard | null>(null);
-  const [newLeadDefaultStatus, setNewLeadDefaultStatus] = useState<LeadStatus>('leads');
+  const [newLeadDefaultStatus, setNewLeadDefaultStatus] = useState<LeadStatus>(
+    () => loadColumns()[0]?.id ?? 'leads',
+  );
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
   const [wallpaperDrawerOpen, setWallpaperDrawerOpen] = useState(false);
   const [sheetSyncOpen, setSheetSyncOpen] = useState(false);
+  const [syncInitialSection, setSyncInitialSection] = useState<'kanban' | 'workspace'>('kanban');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+
+  useEffect(() => {
+    saveColumns(columns);
+  }, [columns]);
 
   useEffect(() => {
     saveLeads(leads);
@@ -262,6 +293,24 @@ export function App() {
     }
   };
 
+  const handleApplyColumns = (nextColumns: KanbanColumnConfig[], message: string) => {
+    if (nextColumns.length === 0) return;
+    const validIds = new Set(nextColumns.map((c) => c.id));
+    const fallbackId = nextColumns[0]!.id;
+    setColumns(nextColumns);
+    setLeads((prev) =>
+      prev.map((lead) => (validIds.has(lead.status) ? lead : { ...lead, status: fallbackId })),
+    );
+    showToast(message);
+  };
+
+  const handleApplySheetImport = (parsed: ParsedSheetResult, summary: string) => {
+    setColumns(parsed.columns);
+    setLeads(parsed.leads);
+    if (connectedFile) setHasUnsavedFileChanges(true);
+    showToast(summary);
+  };
+
   const cities = useMemo(() => {
     const unique = new Set(leads.map((lead) => extractCity(lead.address)));
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
@@ -290,34 +339,33 @@ export function App() {
   }, [leads, searchQuery, leadTypeFilter, cityFilter]);
 
   const leadsByColumn = useMemo(() => {
-    const map: Record<LeadStatus, LeadCard[]> = {
-      leads: [],
-      contacted: [],
-      in_process: [],
-      waiting_approval: [],
-      done: [],
-      lost: [],
-    };
-    for (const lead of filteredLeads) {
-      map[lead.status].push(lead);
+    const map = new Map<string, LeadCard[]>();
+    for (const col of columns) {
+      map.set(col.id, []);
     }
-    for (const col of KANBAN_COLUMNS) {
-      map[col.id].sort((a, b) => a.order - b.order);
+    const fallbackId = columns[0]?.id ?? 'leads';
+    for (const lead of filteredLeads) {
+      const target = map.has(lead.status) ? lead.status : fallbackId;
+      const list = map.get(target);
+      if (list) list.push(lead);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.order - b.order);
     }
     return map;
-  }, [filteredLeads]);
+  }, [filteredLeads, columns]);
 
   const doneCount = useMemo(
-    () => leads.filter((lead) => lead.status === 'done').length,
-    [leads],
+    () => leads.filter((lead) => isDoneColumn(columns, lead.status)).length,
+    [leads, columns],
   );
 
   const totalPipelineValue = useMemo(
     () =>
       leads
-        .filter((lead) => lead.status !== 'lost')
+        .filter((lead) => !isLostColumn(columns, lead.status))
         .reduce((sum, lead) => sum + (lead.dealValue ?? 0), 0),
-    [leads],
+    [leads, columns],
   );
 
   const wallpaperSurface = useMemo(() => {
@@ -353,8 +401,8 @@ export function App() {
     };
   }, [preferences.wallpaperId, preferences.customWallpaperUrl, customUploadDataUrl]);
 
-  const handleConnectLocalFile = async () => {
-    const result = await connectLocalSpreadsheet(leads);
+  const handleConnectLocalFile = async (autoCreateColumns = true) => {
+    const result = await connectLocalSpreadsheet(leads, columns, autoCreateColumns);
     if (!result.ok || !result.data) {
       if (result.error && result.error !== 'CANCELLED') {
         showToast(result.error);
@@ -363,19 +411,26 @@ export function App() {
     }
 
     setConnectedFile(result.data.file);
-    setLeads(result.data.leads);
+    setColumns(result.data.parsed.columns);
+    setLeads(result.data.parsed.leads);
     setHasUnsavedFileChanges(false);
     const derivedTitle = result.data.file.name.replace(/\.(xlsx|csv|tsv)$/i, '');
     if (preferences.boardTitle === 'OND' && derivedTitle) {
       setPreferences((prev) => ({ ...prev, boardTitle: derivedTitle }));
     }
-    showToast(`Connected ${result.data.file.name} (${result.data.leads.length} cards)`);
+    const colNote =
+      result.data.parsed.addedColumnCount > 0
+        ? ` + ${result.data.parsed.addedColumnCount} custom col(s)`
+        : '';
+    showToast(
+      `Connected ${result.data.file.name} (${result.data.parsed.leads.length} cards${colNote})`,
+    );
   };
 
   const handleSaveConnectedFile = async () => {
     if (!connectedFile || isSavingFile) return;
     setIsSavingFile(true);
-    const result = await writeLeadsToConnectedFile(connectedFile, leads);
+    const result = await writeLeadsToConnectedFile(connectedFile, leads, columns);
     setIsSavingFile(false);
 
     if (!result.ok) {
@@ -387,9 +442,9 @@ export function App() {
     showToast(`Saved ${result.data ?? leads.length} cards to ${connectedFile.name}`);
   };
 
-  const handleOpenNewLead = (status: LeadStatus = 'leads') => {
+  const handleOpenNewLead = (status?: LeadStatus) => {
     setEditingLead(null);
-    setNewLeadDefaultStatus(status);
+    setNewLeadDefaultStatus(status ?? columns[0]?.id ?? 'leads');
     setLeadModalOpen(true);
   };
 
@@ -452,7 +507,7 @@ export function App() {
       };
       return [...prev, newCard];
     });
-    showToast(`Added "${draft.businessName}" to ${STATUS_TITLES[draft.status]}`);
+    showToast(`Added "${draft.businessName}" to ${getColumnTitle(columns, draft.status)}`);
   };
 
   const handleDeleteLead = (leadId: string) => {
@@ -495,7 +550,7 @@ export function App() {
     const dragged = leads.find((item) => item.id === draggedId);
     mutateLeads((prev) => moveLeadCard(prev, draggedId, targetLead.status, targetLead.id));
     if (dragged && dragged.status !== targetLead.status) {
-      showToast(`Moved "${dragged.businessName}" → ${STATUS_TITLES[targetLead.status]}`);
+      showToast(`Moved "${dragged.businessName}" → ${getColumnTitle(columns, targetLead.status)}`);
     }
     handleCardDragEnd();
   };
@@ -528,7 +583,7 @@ export function App() {
     const dragged = leads.find((item) => item.id === draggedId);
     mutateLeads((prev) => moveLeadCard(prev, draggedId, status, null));
     if (dragged && dragged.status !== status) {
-      showToast(`Moved "${dragged.businessName}" → ${STATUS_TITLES[status]}`);
+      showToast(`Moved "${dragged.businessName}" → ${getColumnTitle(columns, status)}`);
     }
     handleCardDragEnd();
   };
@@ -544,6 +599,27 @@ export function App() {
   const handleDeleteCalendarEvent = (eventId: string) => {
     setCalendarEvents((prev) => prev.filter((item) => item.id !== eventId));
     showToast('Removed event');
+  };
+
+  const handleMergeCalendarEvents = (incoming: CalendarEvent[], summary: string) => {
+    setCalendarEvents((prev) => {
+      const byId = new Map(prev.map((e) => [e.id, e]));
+      for (const evt of incoming) {
+        byId.set(evt.id, evt);
+      }
+      return Array.from(byId.values());
+    });
+    showToast(summary);
+  };
+
+  const handleApplyWorkspaceBackup = (payload: WorkspaceSyncPayload, summary: string) => {
+    setCalendarEvents([...payload.calendarEvents]);
+    setNotes([...payload.notes]);
+    setActiveNoteId(payload.notes[0]?.id ?? null);
+    if (payload.columns && payload.columns.length > 0) {
+      setColumns([...payload.columns]);
+    }
+    showToast(summary);
   };
 
   const handleCreateNote = () => {
@@ -572,6 +648,14 @@ export function App() {
       return next;
     });
     showToast('Deleted note');
+  };
+
+  const handleImportMarkdownNotes = (importedNotes: NoteItem[], summary: string) => {
+    setNotes((prev) => [...importedNotes, ...prev]);
+    if (importedNotes[0]) {
+      setActiveNoteId(importedNotes[0].id);
+    }
+    showToast(summary);
   };
 
   const handleUploadWallpaper = async (file: File) => {
@@ -613,6 +697,13 @@ export function App() {
     showToast('Wallpaper URL applied');
   };
 
+  const openSyncHub = () => {
+    setSyncInitialSection(
+      activeTab === 'calendar' || activeTab === 'notes' ? 'workspace' : 'kanban',
+    );
+    setSheetSyncOpen(true);
+  };
+
   const hasFilters =
     searchQuery.trim().length > 0 || leadTypeFilter !== 'ALL' || cityFilter !== 'ALL';
 
@@ -645,9 +736,9 @@ export function App() {
         isCheckingUpdate={isCheckingUpdate}
         isApplyingUpdate={isApplyingUpdate}
         onUpdateAction={() => void handleUpdateAction()}
-        onOpenNewLead={() => handleOpenNewLead('leads')}
+        onOpenNewLead={() => handleOpenNewLead()}
         onOpenWallpapers={() => setWallpaperDrawerOpen(true)}
-        onOpenSheetSync={() => setSheetSyncOpen(true)}
+        onOpenSheetSync={openSyncHub}
       />
 
       {activeTab === 'kanban' && (
@@ -701,6 +792,16 @@ export function App() {
               ))}
             </select>
 
+            <button
+              type="button"
+              className="btn-glass is-compact"
+              onClick={() => setTemplatesModalOpen(true)}
+              title="Switch Kanban template or customize columns"
+            >
+              <LayoutTemplate size={14} />
+              <span>Templates &amp; Columns</span>
+            </button>
+
             {hasFilters && (
               <span className="filter-match-count">
                 Showing {filteredLeads.length} of {leads.length}
@@ -713,14 +814,14 @@ export function App() {
               <div className="empty-connect-copy">
                 <strong>Connect your Google Sheet or Excel (.xlsx / .csv)</strong>
                 <span>
-                  Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards.
+                  Your board starts completely private and empty. Link a spreadsheet to turn rows into draggable cards, or customize templates.
                 </span>
               </div>
               <div className="empty-connect-actions">
                 <button
                   type="button"
                   className="btn-primary is-compact"
-                  onClick={() => void handleConnectLocalFile()}
+                  onClick={() => void handleConnectLocalFile(true)}
                 >
                   <FileSpreadsheet size={14} />
                   <span>Open Excel / CSV</span>
@@ -728,7 +829,10 @@ export function App() {
                 <button
                   type="button"
                   className="btn-glass is-compact"
-                  onClick={() => setSheetSyncOpen(true)}
+                  onClick={() => {
+                    setSyncInitialSection('kanban');
+                    setSheetSyncOpen(true);
+                  }}
                 >
                   <Sheet size={14} />
                   <span>Connect Google Sheet</span>
@@ -736,7 +840,15 @@ export function App() {
                 <button
                   type="button"
                   className="btn-glass is-compact"
-                  onClick={() => handleOpenNewLead('leads')}
+                  onClick={() => setTemplatesModalOpen(true)}
+                >
+                  <LayoutTemplate size={14} />
+                  <span>Templates</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-glass is-compact"
+                  onClick={() => handleOpenNewLead()}
                 >
                   <Plus size={14} />
                   <span>Add Card</span>
@@ -758,11 +870,11 @@ export function App() {
 
           <main className="board-stage scroller" aria-label="Kanban pipeline board">
             <div className="board-columns">
-              {KANBAN_COLUMNS.map((column) => (
+              {columns.map((column) => (
                 <KanbanColumn
                   key={column.id}
                   column={column}
-                  leads={leadsByColumn[column.id]}
+                  leads={leadsByColumn.get(column.id) ?? []}
                   draggingLeadId={draggingLeadId}
                   isDropOver={dropOverColumn === column.id}
                   dropTargetCardId={dropTargetCardId}
@@ -787,6 +899,7 @@ export function App() {
           <CalendarView
             events={calendarEvents}
             leads={leads}
+            columns={columns}
             weekStartsOn={preferences.weekStartsOn}
             onChangeWeekStartsOn={(weekStartsOn) =>
               setPreferences((prev) => ({ ...prev, weekStartsOn }))
@@ -831,10 +944,18 @@ export function App() {
       <LeadModal
         open={leadModalOpen}
         lead={editingLead}
+        columns={columns}
         defaultStatus={newLeadDefaultStatus}
         onClose={() => setLeadModalOpen(false)}
         onSave={handleSaveLead}
         onDelete={handleDeleteLead}
+      />
+
+      <BoardTemplatesModal
+        open={templatesModalOpen}
+        columns={columns}
+        onClose={() => setTemplatesModalOpen(false)}
+        onApplyColumns={handleApplyColumns}
       />
 
       <WallpaperDrawer
@@ -855,10 +976,16 @@ export function App() {
 
       <SheetSyncModal
         open={sheetSyncOpen}
+        initialSection={syncInitialSection}
         leads={leads}
+        columns={columns}
+        calendarEvents={calendarEvents}
+        notes={notes}
         preferences={preferences}
         connectedFile={connectedFile}
+        connectedBackupFile={connectedBackupFile}
         hasUnsavedFileChanges={hasUnsavedFileChanges}
+        googleSession={googleSession}
         onClose={() => setSheetSyncOpen(false)}
         onConnectLocalFile={handleConnectLocalFile}
         onSaveConnectedFile={handleSaveConnectedFile}
@@ -867,16 +994,17 @@ export function App() {
           setHasUnsavedFileChanges(false);
           showToast('Disconnected local file');
         }}
-        onReplaceLeads={(nextLeads, summary) => {
-          setLeads(nextLeads);
-          if (connectedFile) setHasUnsavedFileChanges(true);
-          showToast(summary);
-        }}
+        onApplySheetImport={handleApplySheetImport}
         onClearBoard={() => {
           setLeads([]);
           if (connectedFile) setHasUnsavedFileChanges(true);
           showToast('Board cleared');
         }}
+        onSetConnectedBackupFile={setConnectedBackupFile}
+        onApplyWorkspaceBackup={handleApplyWorkspaceBackup}
+        onMergeCalendarEvents={handleMergeCalendarEvents}
+        onImportMarkdownNotes={handleImportMarkdownNotes}
+        onSetGoogleSession={setGoogleSession}
         onUpdateSettings={(patch) => setPreferences((prev) => ({ ...prev, ...patch }))}
       />
 
