@@ -1,5 +1,5 @@
 {
-  "name": "sheet-kanban",
+  "name": "ond",
   "private": true,
   "version": "1.0.0",
   "description": "Interactive glassmorphic Kanban board with custom wallpapers for Google Sheets and Excel (.xlsx / .csv).",

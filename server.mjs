@@ -38,7 +38,7 @@ const server = http.createServer(async (req, res) => {
 
   if (rawUrl === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ ok: true, app: 'sheet-kanban' }));
+    res.end(JSON.stringify({ ok: true, app: 'ond' }));
     return;
   }
 
@@ -78,10 +78,10 @@ server.on('error', (error) => {
   if (error && typeof error === 'object' && 'code' in error && error.code === 'EADDRINUSE') {
     process.exit(0);
   }
-  console.error('SheetKanban server error:', error);
+  console.error('OND server error:', error);
   process.exit(1);
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`SheetKanban running at http://${HOST}:${PORT}`);
+  console.log(`OND running at http://${HOST}:${PORT}`);
 });

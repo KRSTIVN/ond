@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="public/icon.svg" alt="SheetKanban Icon" width="72" height="72" />
+<img src="public/icon.svg" alt="OND Logo" width="88" height="88" />
 
-# SheetKanban
+# OND
 
 **Turn any Google Sheet or Excel workbook into a glassmorphic, wallpaper-backed Kanban desktop app.**
 
@@ -14,7 +14,7 @@
 
 <br />
 
-<img src="docs/demo.gif" alt="SheetKanban live demo — frosted glass Kanban columns, custom wallpapers, stage stepper, and Google Sheets / Excel connector" width="100%" />
+<img src="docs/demo.gif" alt="OND live demo — frosted glass Kanban columns, custom wallpapers, stage stepper, and Google Sheets / Excel connector" width="100%" />
 
 </div>
 
@@ -26,7 +26,7 @@
 
 This project was shaped around how I actually use **Notion** every day, minus the bloat and rigid layout ceilings. Spreadsheets (**Google Sheets** & **Excel**) are unbeatable for capturing and owning raw data, while a great Kanban board is unbeatable for executing on it.
 
-Because I build my own tools, I didn't have to settle for off-the-shelf UI: **SheetKanban** pushes past standard board templates with full-bleed atmospheric wallpapers, real-time glassmorphism optics, zero-latency drag-and-drop, and direct spreadsheet write-back — all running locally with **zero backend, zero accounts, and zero lock-in**.
+Because I build my own tools, I didn't have to settle for off-the-shelf UI: **OND** pushes past standard board templates with full-bleed atmospheric wallpapers, real-time glassmorphism optics, zero-latency drag-and-drop, and direct spreadsheet write-back — all running locally with **zero backend, zero accounts, and zero lock-in**.
 
 ---
 
@@ -58,8 +58,8 @@ flowchart LR
 ## Quick Start
 
 ```bash
-git clone https://github.com/KRSTIVN/sheet-kanban.git
-cd sheet-kanban
+git clone https://github.com/KRSTIVN/ond.git
+cd ond
 npm install
 npm run build
 npm start
@@ -75,15 +75,15 @@ After building (`npm run build`), run:
 powershell -ExecutionPolicy Bypass -File .\scripts\install-shortcut.ps1
 ```
 
-This installs a **SheetKanban** icon on your **Desktop** and **Start Menu**:
-- Double-click once → silently boots `server.mjs` (if not already running) with zero console flash → opens **SheetKanban** in a clean standalone desktop window.
+This installs an **OND** icon on your **Desktop** and **Start Menu**:
+- Double-click once → silently boots `server.mjs` (if not already running) with zero console flash → opens **OND** in a clean standalone desktop window.
 - Right-click the shortcut → **Pin to taskbar** for single-click access.
 
 ---
 
 ## Spreadsheet Sync
 
-**SheetKanban** auto-maps flexible column headers from any Google Sheet or Excel workbook and preserves your Kanban stages across re-imports:
+**OND** auto-maps flexible column headers from any Google Sheet or Excel workbook and preserves your Kanban stages across re-imports:
 
 | Spreadsheet Column | Recognized Header Aliases |
 | :--- | :--- |
@@ -98,7 +98,7 @@ This installs a **SheetKanban** icon on your **Desktop** and **Start Menu**:
 ### Connecting a Private Google Sheet (2-Way Sync)
 1. Click **Sheets / Excel** inside the app → expand **View Apps Script** → **Copy Code**.
 2. In your Google Sheet, open **Extensions → Apps Script**, paste the snippet, and deploy as a **Web App** (*Execute as: Me*, *Who has access: Anyone*).
-3. Paste the deployed `/exec` URL into **SheetKanban** for 1-click **Pull** and **Push**.
+3. Paste the deployed `/exec` URL into **OND** for 1-click **Pull** and **Push**.
 
 ---
 

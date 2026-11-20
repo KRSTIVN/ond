@@ -94,7 +94,7 @@ export function SheetSyncModal({
   }, [open, preferences]);
 
   const handleSaveIdentity = () => {
-    const cleanTitle = boardTitleInput.trim() || 'SheetKanban';
+    const cleanTitle = boardTitleInput.trim() || 'OND';
     const cleanUrl = sheetUrlInput.trim();
     onUpdateSettings({ boardTitle: cleanTitle, googleSheetUrl: cleanUrl });
     setErrorMessage(null);
@@ -115,11 +115,11 @@ export function SheetSyncModal({
 
   const handleDownloadExcel = async () => {
     try {
-      const slug = (preferences.boardTitle || 'sheet-kanban')
+      const slug = (preferences.boardTitle || 'ond')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-      await downloadExcelFile(leads, `${slug || 'sheet-kanban'}.xlsx`);
+      await downloadExcelFile(leads, `${slug || 'ond'}.xlsx`);
       setErrorMessage(null);
       setStatusMessage('Downloaded Excel (.xlsx) workbook with Status, Deal Value, and Follow-up.');
     } catch (error) {
@@ -134,7 +134,7 @@ export function SheetSyncModal({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'sheet-kanban-leads.csv';
+    link.download = 'ond-leads.csv';
     link.click();
     URL.revokeObjectURL(url);
     setErrorMessage(null);
@@ -337,7 +337,7 @@ export function SheetSyncModal({
                 type="text"
                 value={boardTitleInput}
                 onChange={(e) => setBoardTitleInput(e.target.value)}
-                placeholder="SheetKanban"
+                placeholder="OND"
               />
             </label>
             <label className="form-field">

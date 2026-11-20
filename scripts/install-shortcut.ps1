@@ -15,16 +15,16 @@ function Create-AppShortcut([string]$ShortcutPath) {
   $Shortcut.TargetPath = 'wscript.exe'
   $Shortcut.Arguments = "//B `"$VbsLauncher`""
   $Shortcut.WorkingDirectory = $ProjectDir
-  $Shortcut.Description = 'Launch SheetKanban Desktop App'
+  $Shortcut.Description = 'Launch OND Desktop App'
   if (Test-Path $IconPath) {
     $Shortcut.IconLocation = "$IconPath,0"
   }
   $Shortcut.Save()
 }
 
-Create-AppShortcut (Join-Path $DesktopPath 'SheetKanban.lnk')
-Create-AppShortcut (Join-Path $StartMenuDir 'SheetKanban.lnk')
+Create-AppShortcut (Join-Path $DesktopPath 'OND.lnk')
+Create-AppShortcut (Join-Path $StartMenuDir 'OND.lnk')
 
 Write-Host "Installed one-click shortcuts:"
-Write-Host "  Desktop:    $(Join-Path $DesktopPath 'SheetKanban.lnk')"
-Write-Host "  Start Menu: $(Join-Path $StartMenuDir 'SheetKanban.lnk')"
+Write-Host "  Desktop:    $(Join-Path $DesktopPath 'OND.lnk')"
+Write-Host "  Start Menu: $(Join-Path $StartMenuDir 'OND.lnk')"

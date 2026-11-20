@@ -6,17 +6,17 @@ import {
 } from '../domain/types';
 import { normalizeWallpaperId } from '../domain/wallpapers';
 
-const LEADS_STORAGE_KEY = 'sheet_kanban_cards_v1';
-const LEGACY_LEADS_STORAGE_KEY = 'pr_leads_kanban_cards_v1';
-const PREFS_STORAGE_KEY = 'sheet_kanban_prefs_v1';
-const LEGACY_PREFS_STORAGE_KEY = 'pr_leads_kanban_prefs_v1';
-const IDB_NAME = 'sheet_kanban_media_v1';
-const LEGACY_IDB_NAME = 'pr_leads_kanban_media_v1';
+const LEADS_STORAGE_KEY = 'ond_kanban_cards_v1';
+const LEGACY_LEADS_KEYS = ['sheet_kanban_cards_v1', 'pr_leads_kanban_cards_v1'] as const;
+const PREFS_STORAGE_KEY = 'ond_kanban_prefs_v1';
+const LEGACY_PREFS_KEYS = ['sheet_kanban_prefs_v1', 'pr_leads_kanban_prefs_v1'] as const;
+const IDB_NAME = 'ond_kanban_media_v1';
+const LEGACY_IDB_NAMES = ['sheet_kanban_media_v1', 'pr_leads_kanban_media_v1'] as const;
 const IDB_STORE = 'wallpapers';
 const CUSTOM_WALLPAPER_KEY = 'active_custom_wallpaper';
 
 export const DEFAULT_PREFERENCES: BoardPreferences = {
-  boardTitle: 'SheetKanban',
+  boardTitle: 'OND',
   googleSheetUrl: '',
   wallpaperId: 'coastal-twilight',
   customWallpaperUrl: '',
@@ -56,11 +56,19 @@ function parseStoredLead(raw: unknown, fallbackOrder: number): LeadCard | null {
   };
 }
 
+function readFirstStoredKey(primary: string, fallbacks: readonly string[]): string | null {
+  const direct = window.localStorage.getItem(primary);
+  if (direct) return direct;
+  for (const key of fallbacks) {
+    const value = window.localStorage.getItem(key);
+    if (value) return value;
+  }
+  return null;
+}
+
 export function loadLeads(): LeadCard[] {
   try {
-    const raw =
-      window.localStorage.getItem(LEADS_STORAGE_KEY) ??
-      window.localStorage.getItem(LEGACY_LEADS_STORAGE_KEY);
+    const raw = readFirstStoredKey(LEADS_STORAGE_KEY, LEGACY_LEADS_KEYS);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -82,18 +90,16 @@ export function saveLeads(leads: readonly LeadCard[]): void {
 
 export function loadPreferences(): BoardPreferences {
   try {
-    const raw =
-      window.localStorage.getItem(PREFS_STORAGE_KEY) ??
-      window.localStorage.getItem(LEGACY_PREFS_STORAGE_KEY);
+    const raw = readFirstStoredKey(PREFS_STORAGE_KEY, LEGACY_PREFS_KEYS);
     if (!raw) return { ...DEFAULT_PREFERENCES };
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed)) return { ...DEFAULT_PREFERENCES };
 
+    const rawTitle = typeof parsed.boardTitle === 'string' ? parsed.boardTitle.trim() : '';
+    const migratedTitle = !rawTitle || rawTitle === 'SheetKanban' ? 'OND' : rawTitle;
+
     return {
-      boardTitle:
-        typeof parsed.boardTitle === 'string' && parsed.boardTitle.trim()
-          ? parsed.boardTitle.trim()
-          : DEFAULT_PREFERENCES.boardTitle,
+      boardTitle: migratedTitle,
       googleSheetUrl: typeof parsed.googleSheetUrl === 'string' ? parsed.googleSheetUrl : '',
       wallpaperId:
         typeof parsed.wallpaperId === 'string'
@@ -179,7 +185,11 @@ export async function saveCustomWallpaperDataUrl(dataUrl: string): Promise<void>
 export async function loadCustomWallpaperDataUrl(): Promise<string | null> {
   const current = await readFromDb(IDB_NAME);
   if (current) return current;
-  return readFromDb(LEGACY_IDB_NAME);
+  for (const legacyDb of LEGACY_IDB_NAMES) {
+    const found = await readFromDb(legacyDb);
+    if (found) return found;
+  }
+  return null;
 }
 
 export async function clearCustomWallpaperDataUrl(): Promise<void> {

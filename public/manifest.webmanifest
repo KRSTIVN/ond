@@ -1,6 +1,6 @@
 {
-  "name": "SheetKanban",
-  "short_name": "SheetKanban",
+  "name": "OND",
+  "short_name": "OND",
   "description": "Interactive glassmorphic Kanban pipeline synced with Google Sheets and Excel.",
   "start_url": "/",
   "display": "standalone",

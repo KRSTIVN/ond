@@ -1,0 +1,54 @@
+import { useId } from 'react';
+
+interface OndLogoProps {
+  readonly size?: number;
+  readonly className?: string;
+}
+
+export function OndLogo({ size = 36, className }: OndLogoProps) {
+  const uid = useId();
+  const g1 = `${uid}-g1`;
+  const g2 = `${uid}-g2`;
+  const g3 = `${uid}-g3`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 128 128"
+      width={size}
+      height={size}
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={g1} x1="8" y1="22" x2="54" y2="106" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#c7d2fe" />
+          <stop offset="48%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#4338ca" />
+        </linearGradient>
+        <linearGradient id={g2} x1="48" y1="108" x2="82" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="50%" stopColor="#f0f9ff" />
+          <stop offset="100%" stopColor="#38bdf8" />
+        </linearGradient>
+        <linearGradient id={g3} x1="76" y1="22" x2="120" y2="106" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="55%" stopColor="#0ea5e9" />
+          <stop offset="100%" stopColor="#14b8a6" />
+        </linearGradient>
+      </defs>
+
+      <path
+        d="M46.5 26.5C26.3 24.4 8 40.3 8 64C8 87.7 26.3 103.6 46.5 101.5L51.5 87.8C36.8 90.2 22.8 79.8 22.8 64C22.8 48.2 36.8 37.8 51.5 40.2L46.5 26.5Z"
+        fill={`url(#${g1})`}
+      />
+      <path d="M47 104L69.5 24H84.5L62 104H47Z" fill={`url(#${g2})`} />
+      <polygon points="36,56 44,64 36,72 28,64" fill={`url(#${g2})`} opacity="0.92" />
+      <path
+        d="M81.5 26.5L76.5 40.2C91.2 37.8 105.2 48.2 105.2 64C105.2 79.8 91.2 90.2 76.5 87.8L81.5 101.5C101.7 103.6 120 87.7 120 64C120 40.3 101.7 24.4 81.5 26.5Z"
+        fill={`url(#${g3})`}
+      />
+    </svg>
+  );
+}

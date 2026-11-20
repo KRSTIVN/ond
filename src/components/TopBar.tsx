@@ -2,7 +2,6 @@ import {
   ExternalLink,
   FileSpreadsheet,
   Image as ImageIcon,
-  Layers,
   Plus,
   Save,
   Search,
@@ -10,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import type { LeadType } from '../domain/types';
+import { OndLogo } from './OndLogo';
 
 export type LeadTypeFilter = 'ALL' | LeadType;
 
@@ -72,9 +72,7 @@ export function TopBar({
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <div className="brand-badge" aria-hidden="true">
-          <Layers size={18} />
-        </div>
+        <OndLogo size={38} className="brand-logo" />
         <div className="brand-copy">
           <div className="brand-title-row">
             <h1 className="brand-title">{boardTitle}</h1>

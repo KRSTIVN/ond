@@ -257,7 +257,7 @@ export function App() {
     setLeads(result.data.leads);
     setHasUnsavedFileChanges(false);
     const derivedTitle = result.data.file.name.replace(/\.(xlsx|csv|tsv)$/i, '');
-    if (preferences.boardTitle === 'SheetKanban' && derivedTitle) {
+    if (preferences.boardTitle === 'OND' && derivedTitle) {
       setPreferences((prev) => ({ ...prev, boardTitle: derivedTitle }));
     }
     showToast(`Connected ${result.data.file.name} (${result.data.leads.length} cards)`);

@@ -1,14 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="55%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#06b6d4"/>
+    <linearGradient id="ond-g1" x1="8" y1="22" x2="54" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c7d2fe"/>
+      <stop offset="48%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="ond-g2" x1="48" y1="108" x2="82" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#f0f9ff"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="ond-g3" x1="76" y1="22" x2="120" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="55%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
     </linearGradient>
   </defs>
-  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
-  <rect x="20" y="24" width="24" height="80" rx="7" fill="rgba(255,255,255,0.92)"/>
-  <rect x="52" y="24" width="24" height="58" rx="7" fill="rgba(255,255,255,0.84)"/>
-  <rect x="84" y="24" width="24" height="40" rx="7" fill="rgba(255,255,255,0.72)"/>
-  <circle cx="96" cy="92" r="12" fill="#34d399"/>
+
+  <!-- Left geometric O-crescent: precision circular ring with clean diagonal cut -->
+  <path
+    d="M46.5 26.5C26.3 24.4 8 40.3 8 64C8 87.7 26.3 103.6 46.5 101.5L51.5 87.8C36.8 90.2 22.8 79.8 22.8 64C22.8 48.2 36.8 37.8 51.5 40.2L46.5 26.5Z"
+    fill="url(#ond-g1)"
+  />
+
+  <!-- Center architectural diagonal blade: sleek chamfered monolith -->
+  <path
+    d="M47 104L69.5 24H84.5L62 104H47Z"
+    fill="url(#ond-g2)"
+  />
+
+  <!-- Subtle precision geometric accent diamond -->
+  <polygon
+    points="36,56 44,64 36,72 28,64"
+    fill="url(#ond-g2)"
+    opacity="0.92"
+  />
+
+  <!-- Right geometric D-arch: mirrored precision crescent with sharp bevel -->
+  <path
+    d="M81.5 26.5L76.5 40.2C91.2 37.8 105.2 48.2 105.2 64C105.2 79.8 91.2 90.2 76.5 87.8L81.5 101.5C101.7 103.6 120 87.7 120 64C120 40.3 101.7 24.4 81.5 26.5Z"
+    fill="url(#ond-g3)"
+  />
 </svg>

@@ -81,7 +81,7 @@ export async function buildExcelBlob(leads: readonly LeadCard[]): Promise<Blob> 
 
 export async function downloadExcelFile(
   leads: readonly LeadCard[],
-  fileName = 'sheet-kanban-leads.xlsx',
+  fileName = 'ond-leads.xlsx',
 ): Promise<void> {
   const sheetData = buildSheetData(leads);
   await writeXlsxFile(sheetData, {
