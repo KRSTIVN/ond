@@ -118,6 +118,9 @@ export function App() {
   const [wallpaperDrawerOpen, setWallpaperDrawerOpen] = useState(false);
   const [sheetSyncOpen, setSheetSyncOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
 
   useEffect(() => {
     saveLeads(leads);
@@ -149,6 +152,72 @@ export function App() {
     const timer = window.setTimeout(() => setToastMessage(null), 2600);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
+
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/update/status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { ok?: boolean; updateAvailable?: boolean } | null) => {
+        if (active && data?.ok && data.updateAvailable) {
+          setUpdateAvailable(true);
+        }
+      })
+      .catch(() => {
+        // Offline or running outside local OND server
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleUpdateAction = async () => {
+    if (isCheckingUpdate || isApplyingUpdate) return;
+
+    if (updateAvailable) {
+      setIsApplyingUpdate(true);
+      showToast('Pulling latest OND update & rebuilding...');
+      try {
+        const res = await fetch('/api/update/apply', { method: 'POST' });
+        const data = (await res.json()) as { ok?: boolean; updatedTo?: string; error?: string };
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error ?? `HTTP ${res.status}`);
+        }
+        showToast(`Updated to ${data.updatedTo ?? 'latest'} — reloading...`);
+        window.setTimeout(() => window.location.reload(), 700);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Update failed.';
+        showToast(msg);
+        setIsApplyingUpdate(false);
+      }
+      return;
+    }
+
+    setIsCheckingUpdate(true);
+    try {
+      const res = await fetch('/api/update/status');
+      const data = (await res.json()) as {
+        ok?: boolean;
+        localCommit?: string;
+        behindCount?: number;
+        updateAvailable?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? 'Unable to reach GitHub.');
+      }
+      if (data.updateAvailable) {
+        setUpdateAvailable(true);
+        showToast(`${data.behindCount ?? 1} update(s) ready — click Update to install`);
+      } else {
+        showToast(`OND is up to date (${data.localCommit ?? 'latest'})`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Could not check for updates.';
+      showToast(msg);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   const mutateLeads = (updater: (prev: LeadCard[]) => LeadCard[]) => {
     setLeads(updater);
@@ -496,6 +565,10 @@ export function App() {
         doneCount={doneCount}
         totalPipelineValue={totalPipelineValue}
         activeWallpaperThumb={wallpaperSurface.thumb}
+        updateAvailable={updateAvailable}
+        isCheckingUpdate={isCheckingUpdate}
+        isApplyingUpdate={isApplyingUpdate}
+        onUpdateAction={() => void handleUpdateAction()}
         onOpenNewLead={() => handleOpenNewLead('leads')}
         onOpenWallpapers={() => setWallpaperDrawerOpen(true)}
         onOpenSheetSync={() => setSheetSyncOpen(true)}

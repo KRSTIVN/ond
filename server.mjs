@@ -1,14 +1,18 @@
-import http from 'node:http';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
+const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DIST_DIR = path.resolve(__dirname, 'dist');
 const DIST_PREFIX = `${DIST_DIR}${path.sep}`;
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT ?? 5173);
+const IS_WINDOWS = process.platform === 'win32';
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -29,6 +33,91 @@ const MIME_TYPES = new Map([
   ['.json', 'application/json; charset=utf-8'],
   ['.webmanifest', 'application/manifest+json; charset=utf-8'],
 ]);
+
+let isUpdating = false;
+
+function sendJson(res, status, payload, method = 'GET') {
+  res.writeHead(status, {
+    ...SECURITY_HEADERS,
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+  });
+  res.end(method === 'HEAD' ? undefined : JSON.stringify(payload));
+}
+
+function isLocalOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
+}
+
+async function runCmd(command, args, timeoutMs = 60_000) {
+  const { stdout } = await execFileAsync(command, args, {
+    cwd: __dirname,
+    timeout: timeoutMs,
+    windowsHide: true,
+  });
+  return stdout.trim();
+}
+
+async function checkUpdateStatus() {
+  try {
+    await runCmd('git', ['fetch', 'origin', 'main', '--quiet'], 15_000);
+    const [localCommit, remoteCommit, behindRaw, porcelain] = await Promise.all([
+      runCmd('git', ['rev-parse', '--short', 'HEAD']),
+      runCmd('git', ['rev-parse', '--short', 'origin/main']),
+      runCmd('git', ['rev-list', '--count', 'HEAD..origin/main']),
+      runCmd('git', ['status', '--porcelain']),
+    ]);
+    const behindCount = Number.parseInt(behindRaw, 10) || 0;
+    return {
+      ok: true,
+      localCommit,
+      remoteCommit,
+      behindCount,
+      updateAvailable: behindCount > 0,
+      dirtyWorkingTree: porcelain.length > 0,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to check GitHub updates.';
+    return { ok: false, error: message };
+  }
+}
+
+async function applyUpdate() {
+  if (isUpdating) {
+    return { ok: false, error: 'An update is already in progress.' };
+  }
+  isUpdating = true;
+
+  try {
+    const porcelain = await runCmd('git', ['status', '--porcelain']);
+    if (porcelain.length > 0) {
+      return {
+        ok: false,
+        error: 'Local uncommitted changes detected. Commit or stash them before updating.',
+      };
+    }
+
+    const beforeLock = await runCmd('git', ['rev-parse', 'HEAD:package-lock.json']).catch(() => '');
+    await runCmd('git', ['pull', '--ff-only', 'origin', 'main'], 30_000);
+    const afterLock = await runCmd('git', ['rev-parse', 'HEAD:package-lock.json']).catch(() => '');
+
+    const npmBin = IS_WINDOWS ? 'npm.cmd' : 'npm';
+    if (beforeLock !== afterLock) {
+      await runCmd(npmBin, ['install', '--no-audit', '--no-fund'], 120_000);
+    }
+
+    await runCmd(npmBin, ['run', 'build'], 90_000);
+    const updatedTo = await runCmd('git', ['rev-parse', '--short', 'HEAD']);
+    return { ok: true, updatedTo };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Update failed.';
+    return { ok: false, error: message };
+  } finally {
+    isUpdating = false;
+  }
+}
 
 function resolveSafePath(urlPathname) {
   let decoded;
@@ -51,6 +140,45 @@ function resolveSafePath(urlPathname) {
 
 const server = http.createServer(async (req, res) => {
   const method = req.method ?? 'GET';
+  const rawUrl = req.url ?? '/';
+  const pathname = rawUrl.split('?')[0] ?? '/';
+
+  if (pathname === '/api/health') {
+    if (method !== 'GET' && method !== 'HEAD') {
+      res.writeHead(405, { ...SECURITY_HEADERS, Allow: 'GET, HEAD' });
+      res.end('Method Not Allowed');
+      return;
+    }
+    sendJson(res, 200, { ok: true, app: 'ond' }, method);
+    return;
+  }
+
+  if (pathname === '/api/update/status') {
+    if (method !== 'GET') {
+      res.writeHead(405, { ...SECURITY_HEADERS, Allow: 'GET' });
+      res.end('Method Not Allowed');
+      return;
+    }
+    const status = await checkUpdateStatus();
+    sendJson(res, status.ok ? 200 : 500, status);
+    return;
+  }
+
+  if (pathname === '/api/update/apply') {
+    if (method !== 'POST') {
+      res.writeHead(405, { ...SECURITY_HEADERS, Allow: 'POST' });
+      res.end('Method Not Allowed');
+      return;
+    }
+    if (!isLocalOrigin(req)) {
+      sendJson(res, 403, { ok: false, error: 'Cross-origin update blocked.' });
+      return;
+    }
+    const result = await applyUpdate();
+    sendJson(res, result.ok ? 200 : 400, result);
+    return;
+  }
+
   if (method !== 'GET' && method !== 'HEAD') {
     res.writeHead(405, {
       ...SECURITY_HEADERS,
@@ -58,17 +186,6 @@ const server = http.createServer(async (req, res) => {
       'Content-Type': 'text/plain; charset=utf-8',
     });
     res.end('Method Not Allowed');
-    return;
-  }
-
-  const rawUrl = req.url ?? '/';
-  if (rawUrl === '/api/health') {
-    res.writeHead(200, {
-      ...SECURITY_HEADERS,
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-    });
-    res.end(method === 'HEAD' ? undefined : JSON.stringify({ ok: true, app: 'ond' }));
     return;
   }
 

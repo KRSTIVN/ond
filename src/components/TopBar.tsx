@@ -1,8 +1,10 @@
 import {
+  ArrowDownToLine,
   ExternalLink,
   FileSpreadsheet,
   Image as ImageIcon,
   Plus,
+  RefreshCw,
   Save,
   Search,
   Sheet,
@@ -32,6 +34,10 @@ interface TopBarProps {
   readonly doneCount: number;
   readonly totalPipelineValue: number;
   readonly activeWallpaperThumb: string;
+  readonly updateAvailable: boolean;
+  readonly isCheckingUpdate: boolean;
+  readonly isApplyingUpdate: boolean;
+  readonly onUpdateAction: () => void;
   readonly onOpenNewLead: () => void;
   readonly onOpenWallpapers: () => void;
   readonly onOpenSheetSync: () => void;
@@ -62,6 +68,10 @@ export function TopBar({
   doneCount,
   totalPipelineValue,
   activeWallpaperThumb,
+  updateAvailable,
+  isCheckingUpdate,
+  isApplyingUpdate,
+  onUpdateAction,
   onOpenNewLead,
   onOpenWallpapers,
   onOpenSheetSync,
@@ -172,6 +182,30 @@ export function TopBar({
       </div>
 
       <div className="topbar-right">
+        <button
+          type="button"
+          className={`btn-glass ${updateAvailable ? 'is-update-ready' : 'is-icon-only'}`}
+          disabled={isCheckingUpdate || isApplyingUpdate}
+          onClick={onUpdateAction}
+          title={
+            isApplyingUpdate
+              ? 'Updating OND from GitHub...'
+              : updateAvailable
+                ? 'New OND update available — click to install & reload'
+                : 'Check for OND updates on GitHub'
+          }
+          aria-label={updateAvailable ? 'Install OND update' : 'Check for updates'}
+        >
+          {isCheckingUpdate || isApplyingUpdate ? (
+            <RefreshCw size={15} className="is-spinning" />
+          ) : updateAvailable ? (
+            <ArrowDownToLine size={15} />
+          ) : (
+            <RefreshCw size={15} />
+          )}
+          {updateAvailable && <span>{isApplyingUpdate ? 'Updating...' : 'Update'}</span>}
+        </button>
+
         <button
           type="button"
           className="btn-glass"
