@@ -1,0 +1,19 @@
+# Dependencies & build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local personal data & spreadsheets (NEVER commit user content)
+local-data/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.local.json
+.env
+.env.*
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+*.log

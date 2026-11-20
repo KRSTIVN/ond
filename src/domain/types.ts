@@ -1,0 +1,140 @@
+export type LeadStatus =
+  | 'leads'
+  | 'contacted'
+  | 'in_process'
+  | 'waiting_approval'
+  | 'done'
+  | 'lost';
+
+export type LeadType = 'Needs Website' | 'Update Candidate' | 'Other';
+
+export interface LeadCard {
+  readonly id: string;
+  businessName: string;
+  category: string;
+  address: string;
+  phone: string;
+  email: string;
+  websiteUrl: string;
+  leadType: LeadType;
+  notes: string;
+  status: LeadStatus;
+  dealValue: number | null;
+  followUpDate: string;
+  order: number;
+  readonly createdAt: string;
+  updatedAt: string;
+}
+
+export interface KanbanColumnConfig {
+  readonly id: LeadStatus;
+  readonly title: string;
+  readonly shortLabel: string;
+  readonly accent: string;
+}
+
+export type WallpaperPreset =
+  | {
+      readonly id: string;
+      readonly name: string;
+      readonly tag: string;
+      readonly kind: 'image';
+      readonly src: string;
+    }
+  | {
+      readonly id: string;
+      readonly name: string;
+      readonly tag: string;
+      readonly kind: 'gradient';
+      readonly css: string;
+    };
+
+export interface BoardPreferences {
+  boardTitle: string;
+  googleSheetUrl: string;
+  wallpaperId: string;
+  customWallpaperUrl: string;
+  hasCustomUpload: boolean;
+  dimOpacity: number;
+  glassBlur: number;
+  appsScriptUrl: string;
+  csvPublishUrl: string;
+}
+
+export interface Result<T> {
+  readonly ok: boolean;
+  readonly data?: T;
+  readonly error?: string;
+}
+
+const VALID_STATUSES: ReadonlySet<string> = new Set<LeadStatus>([
+  'leads',
+  'contacted',
+  'in_process',
+  'waiting_approval',
+  'done',
+  'lost',
+]);
+
+export function isLeadStatus(value: unknown): value is LeadStatus {
+  return typeof value === 'string' && VALID_STATUSES.has(value);
+}
+
+export function normalizeStatusLabel(raw: string): LeadStatus {
+  const key = raw.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (isLeadStatus(key)) return key;
+  if (key.includes('contact')) return 'contacted';
+  if (key.includes('process') || key.includes('progress')) return 'in_process';
+  if (key.includes('wait') || key.includes('approv')) return 'waiting_approval';
+  if (key.includes('done') || key.includes('won') || key.includes('closed')) return 'done';
+  if (key.includes('lost') || key.includes('dead') || key.includes('declin')) return 'lost';
+  return 'leads';
+}
+
+export function normalizeLeadType(raw: string): LeadType {
+  const cleaned = raw.trim().toLowerCase();
+  if (cleaned.includes('update')) return 'Update Candidate';
+  if (cleaned.includes('need')) return 'Needs Website';
+  return 'Other';
+}
+
+export function extractCity(address: string): string {
+  const trimmed = address.trim();
+  if (!trimmed) return 'Location TBD';
+  const parts = trimmed
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const candidate = parts[parts.length - 2].replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+    if (candidate) return candidate;
+  }
+  const fallback = parts[parts.length - 1]?.replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+  return fallback || 'Location TBD';
+}
+
+export function normalizeWebsiteHref(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed || /^none$/i.test(trimmed) || /^n\/a$/i.test(trimmed)) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('.')) return `https://${trimmed}`;
+  return null;
+}
+
+export function formatWebsiteHost(raw: string): string | null {
+  const href = normalizeWebsiteHref(raw);
+  if (!href) return null;
+  try {
+    return new URL(href).hostname.replace(/^www\./, '');
+  } catch {
+    return raw.trim();
+  }
+}
+
+export function formatShortCategory(raw: string): string {
+  const match = raw.match(/\(([^)]+)\)/);
+  if (match && match[1]) return match[1].trim();
+  return raw.trim() || 'Business';
+}
