@@ -1,10 +1,19 @@
+import type { AngleUnit } from '../types';
+
 export type ProfessionCategory =
+  | 'Solar & Renewable Energy'
+  | 'Electrical & HVAC'
   | 'Finance & Accounting'
+  | 'Real Estate & Mortgage'
   | 'Architecture & Construction'
   | 'Engineering & Physics'
+  | 'Manufacturing & Logistics'
+  | 'Marketing & E-Commerce'
   | 'Healthcare & Nursing'
   | 'Data & Statistics'
-  | 'Software & Cloud';
+  | 'Software & Cloud'
+  | 'Agriculture & Agronomy'
+  | 'Chemistry & Lab Science';
 
 export interface MathFormula {
   readonly id: string;
@@ -14,18 +23,319 @@ export interface MathFormula {
   readonly symbolic: string;
   readonly sampleExpression: string;
   readonly note: string;
+  readonly angleUnit?: AngleUnit;
 }
 
 export const PROFESSION_CATEGORIES: readonly ProfessionCategory[] = [
+  'Solar & Renewable Energy',
+  'Electrical & HVAC',
   'Finance & Accounting',
+  'Real Estate & Mortgage',
   'Architecture & Construction',
   'Engineering & Physics',
+  'Manufacturing & Logistics',
+  'Marketing & E-Commerce',
   'Healthcare & Nursing',
   'Data & Statistics',
   'Software & Cloud',
+  'Agriculture & Agronomy',
+  'Chemistry & Lab Science',
 ];
 
 export const MATH_FORMULAS: readonly MathFormula[] = [
+  // Solar & Renewable Energy
+  {
+    id: 'solar-kw-dc',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Array Sizing',
+    name: 'System Size (kW DC)',
+    symbolic: '(panels × wattsPerPanel) ÷ 1000',
+    sampleExpression: '(20 * 410) / 1000',
+    note: 'Total DC nameplate capacity in kW (e.g. 20 × 410W panels)',
+  },
+  {
+    id: 'solar-size-from-bill',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Load-Based Sizing',
+    name: 'Required System Size (kW DC)',
+    symbolic: 'annualKWh ÷ (PSH × 365 × PR)',
+    sampleExpression: '12000 / (5 * 365 * 0.8)',
+    note: 'Annual kWh usage, Peak Sun Hours (PSH), performance ratio (0.75–0.85)',
+  },
+  {
+    id: 'solar-panel-count',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Array Sizing',
+    name: 'Panel Count Needed',
+    symbolic: '(systemKW × 1000) ÷ panelWatts',
+    sampleExpression: '(8.2 * 1000) / 410',
+    note: 'PV modules required to hit target kW DC',
+  },
+  {
+    id: 'solar-daily-kwh',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Yield Estimation',
+    name: 'Daily Energy Output (kWh/day)',
+    symbolic: 'kW_DC × PSH × PR',
+    sampleExpression: '8.2 * 5.2 * 0.8',
+    note: 'System kW DC × Peak Sun Hours × system derate factor',
+  },
+  {
+    id: 'solar-monthly-kwh',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Yield Estimation',
+    name: 'Monthly Energy Output (kWh/mo)',
+    symbolic: 'kW_DC × PSH × 30.44 × PR',
+    sampleExpression: '8.2 * 5 * 30.44 * 0.8',
+    note: 'Average monthly solar production in kWh',
+  },
+  {
+    id: 'solar-annual-kwh',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Yield Estimation',
+    name: 'Annual Energy Output (kWh/yr)',
+    symbolic: 'kW_DC × PSH × 365 × PR',
+    sampleExpression: '8.2 * 5 * 365 * 0.8',
+    note: 'Estimated yearly PV generation in kWh',
+  },
+  {
+    id: 'solar-specific-yield',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Site Benchmark',
+    name: 'Specific Yield (kWh/kWp/yr)',
+    symbolic: 'annualKWh ÷ systemKWp',
+    sampleExpression: '13500 / 8.5',
+    note: 'Annual kWh generated per installed kW peak',
+  },
+  {
+    id: 'solar-capacity-factor',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Performance Audit',
+    name: 'Capacity Factor (%)',
+    symbolic: 'annualKWh ÷ (systemKW × 8760) × 100',
+    sampleExpression: '13500 / (8.5 * 8760) * 100',
+    note: 'Actual annual yield vs theoretical 24/7 max (typical 15–25%)',
+  },
+  {
+    id: 'solar-dc-ac-ratio',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Inverter Sizing',
+    name: 'DC-to-AC Ratio (ILR)',
+    symbolic: 'arrayKW_DC ÷ inverterKW_AC',
+    sampleExpression: '9.6 / 7.6',
+    note: 'Inverter loading ratio; typical target is 1.15–1.35',
+  },
+  {
+    id: 'solar-offset-pct',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Proposal & Sales',
+    name: 'Solar Energy Offset (%)',
+    symbolic: '(annualSolarKWh ÷ annualUsageKWh) × 100',
+    sampleExpression: '(11400 / 12000) * 100',
+    note: 'Share of annual utility consumption covered by solar',
+  },
+  {
+    id: 'solar-string-voc',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'NEC 690 String Sizing',
+    name: 'Max String Voc (Cold Corrected)',
+    symbolic: 'N × Voc × (1 + β × (Tmin − 25))',
+    sampleExpression: '12 * 37.5 * (1 + (-0.0028) * (-10 - 25))',
+    note: 'N panels, STC Voc, temp coeff β (/°C), record low °C',
+  },
+  {
+    id: 'solar-max-panels-string',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'NEC 690 String Sizing',
+    name: 'Max Panels per String',
+    symbolic: 'VmaxInv ÷ (Voc × (1 + β × (Tmin − 25)))',
+    sampleExpression: '600 / (37.5 * (1 + (-0.0028) * (-10 - 25)))',
+    note: 'Max series panels under inverter Vmax; round down',
+  },
+  {
+    id: 'solar-dc-ocpd',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'NEC 690 Protection',
+    name: 'DC Circuit OCPD Current (156%)',
+    symbolic: 'Isc × parallelStrings × 1.25 × 1.25',
+    sampleExpression: '13.8 * 1 * 1.25 * 1.25',
+    note: 'NEC 125% irradiance × 125% continuous duty amps',
+  },
+  {
+    id: 'solar-ac-breaker',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'NEC Interconnection',
+    name: 'Inverter AC Breaker Size (125%)',
+    symbolic: '(inverterWattsAC ÷ lineVolts) × 1.25',
+    sampleExpression: '(7600 / 240) * 1.25',
+    note: 'Continuous AC current × 1.25 for 240V split-phase OCPD',
+  },
+  {
+    id: 'solar-120-rule',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Main Panel Check',
+    name: '120% Busbar Rule Max Backfeed (A)',
+    symbolic: '(busRating × 1.20) − mainBreaker',
+    sampleExpression: '(200 * 1.20) - 200',
+    note: 'NEC 705.12 max solar breaker amps on load-side panel tap',
+  },
+  {
+    id: 'solar-voltage-drop',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Conductor Sizing',
+    name: 'DC Wire Voltage Drop (%)',
+    symbolic: '(2 × L × I × R_kft ÷ 1000) ÷ V × 100',
+    sampleExpression: '(2 * 80 * 12 * 1.24 / 1000) / 360 * 100',
+    note: 'One-way ft L, amps I, Ω/1000ft (10 AWG ≈ 1.24), string V (<2%)',
+  },
+  {
+    id: 'solar-battery-kwh',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Energy Storage',
+    name: 'Battery Bank Capacity (kWh)',
+    symbolic: '(dailyBackupKWh × days) ÷ (DoD × eff)',
+    sampleExpression: '(20 * 1.5) / (0.9 * 0.92)',
+    note: 'Backup load × autonomy days ÷ (Depth of Discharge × round-trip eff)',
+  },
+  {
+    id: 'solar-battery-ah',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Energy Storage',
+    name: 'Battery Amp-Hours (Ah)',
+    symbolic: '(storageKWh × 1000) ÷ bankVolts',
+    sampleExpression: '(15 * 1000) / 48',
+    note: 'Convert storage kWh to Ah at nominal DC bus voltage (e.g. 48V)',
+  },
+  {
+    id: 'solar-roof-area',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Array Layout',
+    name: 'Roof Area Required (sq ft)',
+    symbolic: 'panels × panelArea × spacingFactor',
+    sampleExpression: '20 * 21.6 * 1.15',
+    note: 'Panel count × area/module (≈21.6 sq ft) × setback factor',
+  },
+  {
+    id: 'solar-row-spacing',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Tilt & Shading',
+    name: 'Inter-Row Shading Distance',
+    symbolic: '(panelLen × sin(tilt)) ÷ tan(sunAlt)',
+    sampleExpression: '(1.72 * sin(25)) / tan(22)',
+    note: 'Module length, tilt°, winter solstice sun altitude° (DEG)',
+    angleUnit: 'deg',
+  },
+  {
+    id: 'solar-degradation',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Lifetime Yield',
+    name: 'Degraded Output at Year N (kWh)',
+    symbolic: 'year1KWh × (1 − degRate)^(year − 1)',
+    sampleExpression: '12000 * (1 - 0.005)^24',
+    note: 'Year-1 kWh and annual panel degradation (e.g. 0.5%/yr at Year 25)',
+  },
+  {
+    id: 'solar-ppw',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Solar Finance',
+    name: 'Price Per Watt ($/W DC)',
+    symbolic: 'totalCost ÷ (systemKW × 1000)',
+    sampleExpression: '24600 / (8.2 * 1000)',
+    note: 'Installed system price divided by DC watts',
+  },
+  {
+    id: 'solar-payback',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Solar Finance',
+    name: 'Simple Payback with ITC (yrs)',
+    symbolic: '(grossCost × (1 − taxCredit)) ÷ annualSavings',
+    sampleExpression: '(24600 * (1 - 0.30)) / 2400',
+    note: 'Net cost after tax credit (e.g. 30%) ÷ yearly utility savings',
+  },
+  {
+    id: 'solar-lcoe',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Solar Finance',
+    name: 'Levelized Cost of Energy ($/kWh)',
+    symbolic: 'netLifetimeCost ÷ lifetimeKWh',
+    sampleExpression: '17220 / (12000 * 25 * 0.94)',
+    note: 'Net installed + O&M cost over 25-year degraded kWh output',
+  },
+  {
+    id: 'solar-co2-offset',
+    profession: 'Solar & Renewable Energy',
+    purpose: 'Carbon Impact',
+    name: 'Annual CO₂ Offset (Metric Tons)',
+    symbolic: 'annualKWh × 0.000417',
+    sampleExpression: '12000 * 0.000417',
+    note: 'EPA US avg grid factor (~0.000417 metric tons CO₂ per kWh)',
+  },
+
+  // Electrical & HVAC
+  {
+    id: 'elec-1ph-kw',
+    profession: 'Electrical & HVAC',
+    purpose: 'Power Distribution',
+    name: 'Single-Phase Real Power (kW)',
+    symbolic: '(V × I × PF) ÷ 1000',
+    sampleExpression: '(240 * 30 * 0.95) / 1000',
+    note: 'Voltage V, current I (A), and power factor PF',
+  },
+  {
+    id: 'elec-3ph-kw',
+    profession: 'Electrical & HVAC',
+    purpose: 'Commercial Power',
+    name: 'Three-Phase Real Power (kW)',
+    symbolic: '(√3 × V × I × PF) ÷ 1000',
+    sampleExpression: '(sqrt(3) * 480 * 50 * 0.9) / 1000',
+    note: 'Line-to-line V, current I (A), power factor PF',
+  },
+  {
+    id: 'elec-amps',
+    profession: 'Electrical & HVAC',
+    purpose: 'Circuit Sizing',
+    name: 'Load Amperage (A)',
+    symbolic: 'watts ÷ (volts × PF)',
+    sampleExpression: '3600 / (240 * 1)',
+    note: 'Current draw in amps from wattage and voltage',
+  },
+  {
+    id: 'elec-energy-cost',
+    profession: 'Electrical & HVAC',
+    purpose: 'Utility Billing',
+    name: 'Equipment Energy Cost ($)',
+    symbolic: '(watts ÷ 1000) × hours × rate',
+    sampleExpression: '(1500 / 1000) * 6 * 0.18',
+    note: 'Power (W), runtime hours, electricity rate ($/kWh)',
+  },
+  {
+    id: 'hvac-tons',
+    profession: 'Electrical & HVAC',
+    purpose: 'Cooling Sizing',
+    name: 'HVAC Cooling Load (Tons)',
+    symbolic: '(sqFt × 25) ÷ 12000',
+    sampleExpression: '(2400 * 25) / 12000',
+    note: 'Quick tonnage estimate (1 ton = 12,000 BTU/hr)',
+  },
+  {
+    id: 'hvac-cfm',
+    profession: 'Electrical & HVAC',
+    purpose: 'Ductwork Design',
+    name: 'Duct Airflow (CFM)',
+    symbolic: 'areaSqFt × velocityFPM',
+    sampleExpression: '1.5 * 700',
+    note: 'Cross-sectional duct area (sq ft) × air velocity (FPM)',
+  },
+  {
+    id: 'hvac-seer-cost',
+    profession: 'Electrical & HVAC',
+    purpose: 'HVAC Efficiency',
+    name: 'Annual AC Cooling Cost ($)',
+    symbolic: '(BTU_hr × hours) ÷ (SEER × 1000) × rate',
+    sampleExpression: '(36000 * 1200) / (16 * 1000) * 0.18',
+    note: 'Cooling BTU/hr, annual hours, SEER rating, $/kWh',
+  },
+
   // Finance & Accounting
   {
     id: 'fin-compound',
@@ -62,6 +372,89 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     symbolic: '72 ÷ rate',
     sampleExpression: '72 / 6',
     note: 'Estimated years to double',
+  },
+  {
+    id: 'fin-roi',
+    profession: 'Finance & Accounting',
+    purpose: 'Capital Allocation',
+    name: 'Return on Investment (ROI %)',
+    symbolic: '(gain − cost) ÷ cost × 100',
+    sampleExpression: '(14500 - 10000) / 10000 * 100',
+    note: 'Net investment return percentage',
+  },
+  {
+    id: 'fin-breakeven',
+    profession: 'Finance & Accounting',
+    purpose: 'Unit Economics',
+    name: 'Break-Even Units',
+    symbolic: 'fixedCosts ÷ (price − varCost)',
+    sampleExpression: '25000 / (75 - 35)',
+    note: 'Minimum units sold to cover fixed overhead',
+  },
+  {
+    id: 'fin-cagr',
+    profession: 'Finance & Accounting',
+    purpose: 'Multi-Year Growth',
+    name: 'CAGR (%)',
+    symbolic: '((end ÷ start)^(1 ÷ years) − 1) × 100',
+    sampleExpression: '((250000 / 100000)^(1 / 5) - 1) * 100',
+    note: 'Compound annual growth rate across years',
+  },
+
+  // Real Estate & Mortgage
+  {
+    id: 're-mortgage',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Loan Underwriting',
+    name: 'Monthly Mortgage Payment (P&I)',
+    symbolic: 'P × (r × (1+r)^n) ÷ ((1+r)^n − 1)',
+    sampleExpression: '400000 * ((0.065/12) * (1 + 0.065/12)^360) / ((1 + 0.065/12)^360 - 1)',
+    note: 'Loan P, monthly rate r (APR/12), total months n (360 = 30yr)',
+  },
+  {
+    id: 're-cap-rate',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Valuation',
+    name: 'Capitalization Rate (%)',
+    symbolic: '(NOI ÷ propertyValue) × 100',
+    sampleExpression: '(42000 / 600000) * 100',
+    note: 'Net operating income divided by asset value',
+  },
+  {
+    id: 're-coc',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Investor Yield',
+    name: 'Cash-on-Cash Return (%)',
+    symbolic: '(annualCashFlow ÷ cashInvested) × 100',
+    sampleExpression: '(10800 / 120000) * 100',
+    note: 'Pre-tax yearly cash flow over total out-of-pocket cash',
+  },
+  {
+    id: 're-dscr',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Commercial Lending',
+    name: 'Debt Service Coverage (DSCR)',
+    symbolic: 'NOI ÷ annualDebtService',
+    sampleExpression: '54000 / 40000',
+    note: 'Cash flow cushion over annual loan payments (lenders want ≥1.25)',
+  },
+  {
+    id: 're-grm',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Deal Screening',
+    name: 'Gross Rent Multiplier (GRM)',
+    symbolic: 'propertyPrice ÷ annualGrossRent',
+    sampleExpression: '480000 / 48000',
+    note: 'Years of gross rent required to equal purchase price',
+  },
+  {
+    id: 're-price-sqft',
+    profession: 'Real Estate & Mortgage',
+    purpose: 'Comps Analysis',
+    name: 'Price per Square Foot ($/sqft)',
+    symbolic: 'salePrice ÷ totalSqFt',
+    sampleExpression: '525000 / 2100',
+    note: 'Normalized property price per square foot',
   },
 
   // Architecture & Construction
@@ -101,6 +494,34 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     sampleExpression: '1.2 / 15 * 100',
     note: 'Grade percentage from rise and run',
   },
+  {
+    id: 'arch-concrete-yd',
+    profession: 'Architecture & Construction',
+    purpose: 'Concrete Estimation',
+    name: 'Concrete Slab Volume (yd³)',
+    symbolic: '(L × W × (thickIn ÷ 12)) ÷ 27',
+    sampleExpression: '(20 * 15 * (4 / 12)) / 27',
+    note: 'Length ft × Width ft × slab thickness (in) in cubic yards',
+  },
+  {
+    id: 'arch-rafter',
+    profession: 'Architecture & Construction',
+    purpose: 'Roof Framing',
+    name: 'Roof Rafter Length',
+    symbolic: 'run ÷ cos(pitchDeg)',
+    sampleExpression: '12 / cos(26.57)',
+    note: 'Horizontal run over cosine of roof angle (DEG)',
+    angleUnit: 'deg',
+  },
+  {
+    id: 'arch-board-feet',
+    profession: 'Architecture & Construction',
+    purpose: 'Lumber Takeoff',
+    name: 'Lumber Board Feet',
+    symbolic: '(thickIn × widthIn × lengthFt) ÷ 12',
+    sampleExpression: '(2 * 6 * 12) / 12',
+    note: 'Standard timber volume in board feet',
+  },
 
   // Engineering & Physics
   {
@@ -138,6 +559,145 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     symbolic: 'c ÷ λ',
     sampleExpression: '300000000 / 0.5',
     note: 'Speed c divided by wavelength λ',
+  },
+  {
+    id: 'eng-hp-kw',
+    profession: 'Engineering & Physics',
+    purpose: 'Motor Conversion',
+    name: 'Horsepower to Kilowatts (kW)',
+    symbolic: 'HP × 0.7457',
+    sampleExpression: '15 * 0.7457',
+    note: 'Mechanical horsepower to electrical kW',
+  },
+  {
+    id: 'eng-db-power',
+    profession: 'Engineering & Physics',
+    purpose: 'Acoustics & RF',
+    name: 'Power Ratio (dB)',
+    symbolic: '10 × log(P2 ÷ P1)',
+    sampleExpression: '10 * log(100 / 1)',
+    note: 'Logarithmic power gain or attenuation in decibels',
+  },
+  {
+    id: 'eng-torque',
+    profession: 'Engineering & Physics',
+    purpose: 'Drivetrain Power',
+    name: 'Shaft Power (kW from Torque)',
+    symbolic: '(torqueNm × RPM) ÷ 9549',
+    sampleExpression: '(120 * 1800) / 9549',
+    note: 'Torque (N·m) and speed (RPM) to mechanical kW',
+  },
+
+  // Manufacturing & Logistics
+  {
+    id: 'mfg-oee',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Plant Efficiency',
+    name: 'OEE Score (%)',
+    symbolic: 'avail × perf × quality × 100',
+    sampleExpression: '0.90 * 0.92 * 0.98 * 100',
+    note: 'Overall Equipment Effectiveness (world-class ≥ 85%)',
+  },
+  {
+    id: 'mfg-takt',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Lean Production',
+    name: 'Takt Time (sec/unit)',
+    symbolic: 'availableSec ÷ demandUnits',
+    sampleExpression: '28800 / 480',
+    note: 'Required production pace to meet customer demand',
+  },
+  {
+    id: 'mfg-eoq',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Inventory Control',
+    name: 'Economic Order Quantity (EOQ)',
+    symbolic: '√((2 × D × S) ÷ H)',
+    sampleExpression: 'sqrt((2 * 10000 * 50) / 4)',
+    note: 'Annual demand D, order cost S, holding cost/unit H',
+  },
+  {
+    id: 'mfg-dim-weight',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Freight & Parcel',
+    name: 'Dimensional Weight (lbs)',
+    symbolic: '(L × W × H) ÷ 139',
+    sampleExpression: '(24 * 18 * 12) / 139',
+    note: 'Carrier billable weight from box inches (divisor 139)',
+  },
+  {
+    id: 'mfg-inv-turn',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Supply Chain',
+    name: 'Inventory Turnover Ratio',
+    symbolic: 'COGS ÷ avgInventory',
+    sampleExpression: '850000 / 170000',
+    note: 'Times stock cycles through the warehouse per period',
+  },
+  {
+    id: 'mfg-throughput',
+    profession: 'Manufacturing & Logistics',
+    purpose: 'Line Balancing',
+    name: 'Throughput Rate (units/hr)',
+    symbolic: '3600 ÷ cycleSeconds',
+    sampleExpression: '3600 / 45',
+    note: 'Hourly unit output from bottleneck cycle time',
+  },
+
+  // Marketing & E-Commerce
+  {
+    id: 'mkt-roas',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'Paid Media',
+    name: 'Return on Ad Spend (ROAS)',
+    symbolic: 'adRevenue ÷ adSpend',
+    sampleExpression: '18500 / 4000',
+    note: 'Revenue multiplier per dollar spent on ads',
+  },
+  {
+    id: 'mkt-cac',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'Growth Metrics',
+    name: 'Customer Acquisition Cost ($)',
+    symbolic: 'marketingSpend ÷ newCustomers',
+    sampleExpression: '12000 / 150',
+    note: 'Blended acquisition cost per new paying customer',
+  },
+  {
+    id: 'mkt-ltv-cac',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'SaaS & DTC Health',
+    name: 'LTV : CAC Ratio',
+    symbolic: '(ARPU × margin × months) ÷ CAC',
+    sampleExpression: '(49 * 0.75 * 18) / 180',
+    note: 'Lifetime gross profit over CAC (healthy target ≥ 3x)',
+  },
+  {
+    id: 'mkt-cvr',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'Funnel Optimization',
+    name: 'Conversion Rate (%)',
+    symbolic: '(conversions ÷ visitors) × 100',
+    sampleExpression: '(320 / 8000) * 100',
+    note: 'Share of sessions completing a purchase or lead goal',
+  },
+  {
+    id: 'mkt-ctr',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'Ad Creative',
+    name: 'Click-Through Rate (CTR %)',
+    symbolic: '(clicks ÷ impressions) × 100',
+    sampleExpression: '(420 / 15000) * 100',
+    note: 'Percentage of impressions generating a click',
+  },
+  {
+    id: 'mkt-net-margin',
+    profession: 'Marketing & E-Commerce',
+    purpose: 'Contribution Margin',
+    name: 'E-Commerce Net Margin (%)',
+    symbolic: '((price − cogs − fees − ads) ÷ price) × 100',
+    sampleExpression: '((80 - 22 - 8 - 16) / 80) * 100',
+    note: 'Per-order net profit margin after COGS, fees, and CPA',
   },
 
   // Healthcare & Nursing
@@ -177,6 +737,24 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     sampleExpression: '(120 + 2 * 80) / 3',
     note: 'Systolic and diastolic BP',
   },
+  {
+    id: 'med-crcl',
+    profession: 'Healthcare & Nursing',
+    purpose: 'Renal Dosing',
+    name: 'Creatinine Clearance (mL/min)',
+    symbolic: '((140 − age) × weightKg) ÷ (72 × SCr)',
+    sampleExpression: '((140 - 65) * 70) / (72 * 1.1)',
+    note: 'Cockcroft-Gault estimate (multiply by 0.85 for female)',
+  },
+  {
+    id: 'med-bsa',
+    profession: 'Healthcare & Nursing',
+    purpose: 'Oncology & BSA',
+    name: 'Body Surface Area (Mosteller m²)',
+    symbolic: '√((heightCm × weightKg) ÷ 3600)',
+    sampleExpression: 'sqrt((175 * 72) / 3600)',
+    note: 'Patient BSA from height (cm) and weight (kg)',
+  },
 
   // Data & Statistics
   {
@@ -214,6 +792,24 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     symbolic: 'abs(est − actual) ÷ actual × 100',
     sampleExpression: 'abs(94 - 100) / 100 * 100',
     note: 'Forecast accuracy error %',
+  },
+  {
+    id: 'stat-zscore',
+    profession: 'Data & Statistics',
+    purpose: 'Standardization',
+    name: 'Z-Score',
+    symbolic: '(x − μ) ÷ σ',
+    sampleExpression: '(86 - 75) / 5',
+    note: 'Standard deviations from population mean μ',
+  },
+  {
+    id: 'stat-moe',
+    profession: 'Data & Statistics',
+    purpose: 'Confidence Interval',
+    name: '95% Margin of Error',
+    symbolic: '1.96 × (s ÷ √n)',
+    sampleExpression: '1.96 * (12 / sqrt(100))',
+    note: 'Half-width of 95% confidence interval for sample mean',
   },
 
   // Software & Cloud
@@ -253,4 +849,144 @@ export const MATH_FORMULAS: readonly MathFormula[] = [
     sampleExpression: '250 * 8 / 100',
     note: 'File size (MB) over link speed',
   },
+  {
+    id: 'sw-monthly-cost',
+    profession: 'Software & Cloud',
+    purpose: 'FinOps',
+    name: 'Monthly Cloud Compute ($)',
+    symbolic: 'hourlyRate × 730 × instances',
+    sampleExpression: '0.192 * 730 * 4',
+    note: '24/7 fleet cost across average 730 hrs/month',
+  },
+  {
+    id: 'sw-bandwidth-tb',
+    profession: 'Software & Cloud',
+    purpose: 'Egress Budgeting',
+    name: 'Monthly Egress Traffic (TB)',
+    symbolic: '(Mbps × 86400 × 30) ÷ (8 × 1000000)',
+    sampleExpression: '(100 * 86400 * 30) / (8 * 1000000)',
+    note: 'Sustained Mbps throughput converted to monthly TB',
+  },
+
+  // Agriculture & Agronomy
+  {
+    id: 'ag-acres',
+    profession: 'Agriculture & Agronomy',
+    purpose: 'Land Measurement',
+    name: 'Field Area (Acres)',
+    symbolic: '(lengthFt × widthFt) ÷ 43560',
+    sampleExpression: '(1320 * 660) / 43560',
+    note: 'Convert rectangular plot feet to acres',
+  },
+  {
+    id: 'ag-seeding',
+    profession: 'Agriculture & Agronomy',
+    purpose: 'Planting Plan',
+    name: 'Total Seed Required (lbs)',
+    symbolic: 'acres × lbsPerAcre',
+    sampleExpression: '45 * 60',
+    note: 'Field acreage × target seeding rate per acre',
+  },
+  {
+    id: 'ag-irrigation',
+    profession: 'Agriculture & Agronomy',
+    purpose: 'Water Management',
+    name: 'Irrigation Applied (acre-in)',
+    symbolic: '(gpm × hours) ÷ 452.6',
+    sampleExpression: '(400 * 12) / 452.6',
+    note: 'Pump flow (GPM) and runtime hours to acre-inches',
+  },
+  {
+    id: 'ag-gdd',
+    profession: 'Agriculture & Agronomy',
+    purpose: 'Crop Maturity',
+    name: 'Growing Degree Days (GDD)',
+    symbolic: '((Tmax + Tmin) ÷ 2) − Tbase',
+    sampleExpression: '((84 + 60) / 2) - 50',
+    note: 'Daily heat unit accumulation above base temp (°F)',
+  },
+  {
+    id: 'ag-fertilizer',
+    profession: 'Agriculture & Agronomy',
+    purpose: 'Soil Fertility',
+    name: 'Actual Nutrient Applied (lbs)',
+    symbolic: 'productLbs × (nutrientPct ÷ 100)',
+    sampleExpression: '200 * (46 / 100)',
+    note: 'Active N-P-K pounds from bag weight and analysis %',
+  },
+
+  // Chemistry & Lab Science
+  {
+    id: 'chem-molarity',
+    profession: 'Chemistry & Lab Science',
+    purpose: 'Solution Prep',
+    name: 'Molarity (mol/L)',
+    symbolic: 'moles ÷ liters',
+    sampleExpression: '0.75 / 1.5',
+    note: 'Solute moles per liter of solution',
+  },
+  {
+    id: 'chem-dilution',
+    profession: 'Chemistry & Lab Science',
+    purpose: 'Stock Dilution',
+    name: 'Stock Volume V₁ (C₁V₁ = C₂V₂)',
+    symbolic: '(C2 × V2) ÷ C1',
+    sampleExpression: '(0.5 * 250) / 2',
+    note: 'Stock volume needed for target concentration and volume',
+  },
+  {
+    id: 'chem-ideal-gas',
+    profession: 'Chemistry & Lab Science',
+    purpose: 'Thermodynamics',
+    name: 'Ideal Gas Pressure (atm)',
+    symbolic: '(n × 0.08206 × T_K) ÷ V_L',
+    sampleExpression: '(2 * 0.08206 * 298.15) / 10',
+    note: 'Moles n, gas constant R, Kelvin T, volume V (L)',
+  },
+  {
+    id: 'chem-ph',
+    profession: 'Chemistry & Lab Science',
+    purpose: 'Acid-Base Analysis',
+    name: 'Solution pH from [H⁺]',
+    symbolic: '−log(H_conc)',
+    sampleExpression: '-log(0.0001)',
+    note: 'Negative base-10 log of hydrogen ion molarity',
+  },
+  {
+    id: 'chem-yield',
+    profession: 'Chemistry & Lab Science',
+    purpose: 'Synthesis QA',
+    name: 'Percent Yield (%)',
+    symbolic: '(actualYield ÷ theoreticalYield) × 100',
+    sampleExpression: '(18.4 / 22.0) * 100',
+    note: 'Actual recovered mass over stoichiometric max',
+  },
 ];
+
+/** Count formulas available in a given industry category. */
+export function countFormulasByProfession(profession: ProfessionCategory): number {
+  let count = 0;
+  for (const formula of MATH_FORMULAS) {
+    if (formula.profession === profession) count += 1;
+  }
+  return count;
+}
+
+/**
+ * Filter formulas by search query (across all industries) or by active industry category.
+ * When `query` is non-empty, searches name, purpose, profession, symbolic notation, and note.
+ */
+export function filterMathFormulas(
+  profession: ProfessionCategory,
+  query: string,
+): readonly MathFormula[] {
+  const normalized = query.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return MATH_FORMULAS.filter((formula) => formula.profession === profession);
+  }
+
+  return MATH_FORMULAS.filter((formula) => {
+    const haystack = `${formula.name} ${formula.purpose} ${formula.profession} ${formula.symbolic} ${formula.note}`;
+    return haystack.toLowerCase().includes(normalized);
+  });
+}

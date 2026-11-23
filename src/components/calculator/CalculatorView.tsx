@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Delete, Sigma, Trash2 } from 'lucide-react';
+import { Check, Copy, Delete, Search, Sigma, Trash2 } from 'lucide-react';
 import { evaluateExpression } from '../../domain/calculator/evaluator';
 import {
+  countFormulasByProfession,
+  filterMathFormulas,
   MATH_FORMULAS,
   PROFESSION_CATEGORIES,
   type ProfessionCategory,
@@ -69,12 +71,14 @@ export function CalculatorView({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [sideTab, setSideTab] = useState<'formulas' | 'history'>('formulas');
-  const [profession, setProfession] = useState<ProfessionCategory>('Finance & Accounting');
+  const [profession, setProfession] = useState<ProfessionCategory>('Solar & Renewable Energy');
+  const [formulaQuery, setFormulaQuery] = useState('');
 
-  const professionFormulas = useMemo(
-    () => MATH_FORMULAS.filter((f) => f.profession === profession),
-    [profession],
+  const visibleFormulas = useMemo(
+    () => filterMathFormulas(profession, formulaQuery),
+    [profession, formulaQuery],
   );
+  const isSearchingFormulas = formulaQuery.trim().length > 0;
 
   const liveEval = useMemo(() => {
     if (!expression.trim()) return null;
@@ -326,34 +330,70 @@ export function CalculatorView({
           <>
             <select
               className="glass-input"
-              aria-label="Select profession"
+              aria-label="Select industry"
               value={profession}
-              onChange={(e) => setProfession(e.target.value as ProfessionCategory)}
+              onChange={(e) => {
+                setProfession(e.target.value as ProfessionCategory);
+                setFormulaQuery('');
+              }}
             >
               {PROFESSION_CATEGORIES.map((prof) => (
                 <option key={prof} value={prof}>
-                  {prof}
+                  {prof} ({countFormulasByProfession(prof)})
                 </option>
               ))}
             </select>
 
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search
+                size={13}
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: '0.7rem',
+                  opacity: 0.65,
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                type="search"
+                className="glass-input"
+                aria-label="Search all formulas"
+                placeholder={`Search all ${MATH_FORMULAS.length} formulas (kW, battery, ROI...)`}
+                value={formulaQuery}
+                onChange={(e) => setFormulaQuery(e.target.value)}
+                style={{ paddingLeft: '1.9rem', width: '100%' }}
+              />
+            </div>
+
             <div className="calc-tape-list scroller">
-              {professionFormulas.map((formula) => (
-                <button
-                  key={formula.id}
-                  type="button"
-                  className="calc-tape-item is-formula"
-                  onClick={() => {
-                    setErrorMsg(null);
-                    setExpression(formula.sampleExpression);
-                  }}
-                >
-                  <span className="formula-purpose-badge">For: {formula.purpose}</span>
-                  <strong className="formula-name">{formula.name}</strong>
-                  <span className="formula-symbolic mono-num">{formula.symbolic}</span>
-                  <span className="formula-note">{formula.note} · Click to load</span>
-                </button>
-              ))}
+              {visibleFormulas.length === 0 ? (
+                <p className="notes-empty-hint">
+                  No formulas match "{formulaQuery.trim()}". Try kW, solar, battery, voltage, or ROI.
+                </p>
+              ) : (
+                visibleFormulas.map((formula) => (
+                  <button
+                    key={formula.id}
+                    type="button"
+                    className="calc-tape-item is-formula"
+                    onClick={() => {
+                      setErrorMsg(null);
+                      if (formula.angleUnit && formula.angleUnit !== angleUnit) {
+                        onChangeAngleUnit(formula.angleUnit);
+                      }
+                      setExpression(formula.sampleExpression);
+                    }}
+                  >
+                    <span className="formula-purpose-badge">
+                      {isSearchingFormulas ? `${formula.profession} · ${formula.purpose}` : `For: ${formula.purpose}`}
+                    </span>
+                    <strong className="formula-name">{formula.name}</strong>
+                    <span className="formula-symbolic mono-num">{formula.symbolic}</span>
+                    <span className="formula-note">{formula.note} · Click to load</span>
+                  </button>
+                ))
+              )}
             </div>
           </>
         ) : (
