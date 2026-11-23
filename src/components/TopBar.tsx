@@ -13,6 +13,7 @@ import {
   Save,
   Sheet,
 } from 'lucide-react';
+import { MATH_FORMULAS } from '../domain/calculator/formulas';
 import { sanitizeHttpUrl, type WorkspaceTab } from '../domain/types';
 import { OndLogo } from './OndLogo';
 
@@ -138,7 +139,9 @@ export function TopBar({
                 {notesCount} markdown {notesCount === 1 ? 'note' : 'notes'}
               </span>
             )}
-            {activeTab === 'calculator' && <span>Scientific &amp; 24 profession formulas</span>}
+            {activeTab === 'calculator' && (
+              <span>Scientific &amp; {MATH_FORMULAS.length} industry formulas</span>
+            )}
           </div>
         </div>
       </div>

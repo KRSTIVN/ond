@@ -9,7 +9,7 @@
 [![React 19](https://img.shields.io/badge/React-19-0f172a?style=for-the-badge&logo=react&logoColor=38bdf8)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-0f172a?style=for-the-badge&logo=typescript&logoColor=818cf8)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-6-0f172a?style=for-the-badge&logo=vite&logoColor=fbbf24)](https://vite.dev)
-[![Windows & macOS](https://img.shields.io/badge/Desktop-Windows_%26_macOS-0f172a?style=for-the-badge&logo=apple&logoColor=f8fafc)](#one-click-desktop-app-windows--macos)
+[![Windows & macOS](https://img.shields.io/badge/Download-Windows_.exe_%26_macOS_.dmg-0f172a?style=for-the-badge&logo=apple&logoColor=f8fafc)](https://github.com/KRSTIVN/ond/releases/latest)
 [![Excel & Sheets](https://img.shields.io/badge/Sync-Sheets_%26_Excel-0f172a?style=for-the-badge&logo=googlesheets&logoColor=34d399)](#spreadsheet-sync)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f172a?style=for-the-badge&logoColor=f8fafc)](LICENSE)
 
@@ -39,7 +39,7 @@ Because I build my own tools, I didn't have to settle for off-the-shelf UI: **ON
 | **Customizable Kanban & Templates** | Ships with the default **6-Stage Sales & Leads Pipeline** (`Leads` → `Contacted` → `In Process` → `Waiting Approval` → `Done` → `Lost`), plus 1-click templates (*Product Sprint*, *Content Studio*, *Personal Notion Flow*), full manual column editing (add, rename, recolor, reorder, delete), and **auto-column creation from uploaded spreadsheet `Status` values**. |
 | **Temporal Calendar** | Full month grid (`Temporal` API + `Mon`/`Sun` week start), category-coded events (`Focus`, `Meeting`, `Personal`, `Deadline`), day agenda panel, `.ics` import/export (Apple Calendar, Google Calendar, Outlook), and live **Kanban Follow-up Dates** on the grid. |
 | **Markdown Notes** | Live split / edit / preview Markdown workspace with safe AST rendering (zero `dangerouslySetInnerHTML`), clickable `- [ ]` checklists, formatting toolbar, pinning, `#tags`, search, and `.md` import/export. |
-| **Calculator & Formula Box** | Standard & Scientific modes (`DEG`/`RAD`), safe recursive-descent math parser (zero `eval`), calculation history tape, and **24 one-click Profession Formulas** across 6 disciplines (*Finance*, *Architecture*, *Engineering*, *Healthcare*, *Data & Statistics*, *Software & Cloud*). |
+| **Calculator & Formula Box** | Standard & Scientific modes (`DEG`/`RAD`), safe recursive-descent math parser (zero `eval`), calculation history tape, cross-industry search, and **99 one-click Industry Formulas** across 13 disciplines — led by **25 Solar & Renewable Energy** formulas (*kW DC sizing, yield, NEC 690/705, battery storage, payback, LCOE*) plus *Electrical & HVAC*, *Finance*, *Real Estate*, *Architecture*, *Engineering*, *Manufacturing*, *Marketing*, *Healthcare*, *Data & Statistics*, *Software & Cloud*, *Agriculture*, and *Chemistry*. |
 | **Wallpaper Studio** | Curated high-contrast wallpapers — including **3 Poison Dart Frog on pure black studio backdrops** (*Cobalt Azureus*, *Golden Banded*, *Strawberry*), scenic photography, obsidian dark glass, minimal gradients, custom `IndexedDB` uploads, image URLs, and live **Backdrop Dimming** + **Glass Blur** sliders. |
 | **Local + Google Sign-In Sync** | Save Calendar & Notes locally (`.json` live file write-back, `.ics`, `.md`), sync Kanban with local `.xlsx`/`.csv` files or Google Sheets, OR sign in with your own **Google OAuth Client ID** to sync directly with **Google Calendar** and **Google Drive** (tokens stay in memory only). |
 | **Cross-Platform Desktop App & Updater** | 1-click native-feel standalone window launchers for both **Windows** (`.lnk`) and **macOS** (`~/Applications/OND.app`), plus a built-in **1-click in-app GitHub updater**. |
@@ -73,17 +73,24 @@ Open **`http://127.0.0.1:5173/`** and click **Sync & Backup** to connect your sp
 
 ## One-Click Desktop App (Windows & macOS)
 
-### Windows
-```powershell
-npm run install:win
-```
-Creates an **OND** shortcut on your **Desktop** and **Start Menu**. Double-click once to launch silently in standalone desktop app mode (`--app`), or right-click → **Pin to taskbar**.
+### Direct Click-to-Install (Recommended — No Node.js or Terminal Required)
+Download the latest native installer from **[GitHub Releases](https://github.com/KRSTIVN/ond/releases/latest)**:
 
-### macOS
-```bash
+- **Windows (`.exe`)**: Download `OND-Setup-<version>-x64.exe` (or `arm64`) and double-click — installs silently in one click, creates Desktop & Start Menu shortcuts, and updates automatically in-app.
+- **macOS (`.dmg`)**: Download `OND-<version>-universal.dmg` (Apple Silicon + Intel), open it, and drag **OND** into **Applications**. *(First launch on unsigned builds: right-click `OND.app` → **Open**.)*
+
+### Developer / Local Script Mode
+```powershell
+# Windows local shortcut
+npm run install:win
+
+# macOS local bundle
 npm run install:mac
+
+# Build native installers locally
+npm run dist:win   # outputs release/OND-Setup-*.exe
+npm run dist:mac   # outputs release/OND-*-universal.dmg
 ```
-Creates a native **`~/Applications/OND.app`** bundle (with `AppIcon.icns`). Open via Spotlight (`OND`), Finder, or drag **OND.app** onto your Dock. It silently boots `server.mjs` and opens Chrome / Brave / Edge in standalone `--app` mode (falling back to Safari if none are installed).
 
 ---
 

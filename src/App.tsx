@@ -243,6 +243,41 @@ export function App() {
 
   useEffect(() => {
     let active = true;
+    const desktop = window.ondDesktop;
+
+    if (desktop) {
+      const unsubscribe = desktop.onUpdateEvent((event) => {
+        if (!active) return;
+        if (event.type === 'available') {
+          setUpdateAvailable(true);
+        } else if (event.type === 'progress') {
+          showToast(`Downloading OND update (${event.percent}%)...`);
+        } else if (event.type === 'downloaded') {
+          setUpdateAvailable(true);
+          showToast(`OND v${event.version} downloaded — restarting to install...`);
+        } else if (event.type === 'error') {
+          setIsApplyingUpdate(false);
+          showToast(event.message);
+        }
+      });
+
+      void desktop
+        .checkForUpdates()
+        .then((res) => {
+          if (active && res.ok && res.updateAvailable) {
+            setUpdateAvailable(true);
+          }
+        })
+        .catch(() => {
+          // Offline or packaged without release feed
+        });
+
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }
+
     void fetch('/api/update/status')
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { ok?: boolean; updateAvailable?: boolean } | null) => {
@@ -260,6 +295,49 @@ export function App() {
 
   const handleUpdateAction = async () => {
     if (isCheckingUpdate || isApplyingUpdate) return;
+    const desktop = window.ondDesktop;
+
+    if (desktop) {
+      if (updateAvailable) {
+        setIsApplyingUpdate(true);
+        showToast('Downloading OND desktop update...');
+        try {
+          const res = await desktop.installUpdate();
+          if (!res.ok) {
+            throw new Error(res.error ?? 'Update failed.');
+          }
+          if (res.mode === 'manual-download') {
+            showToast('Opened latest macOS installer on GitHub Releases.');
+            setIsApplyingUpdate(false);
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Update failed.';
+          showToast(msg);
+          setIsApplyingUpdate(false);
+        }
+        return;
+      }
+
+      setIsCheckingUpdate(true);
+      try {
+        const res = await desktop.checkForUpdates();
+        if (!res.ok) {
+          throw new Error(res.error ?? 'Unable to reach GitHub Releases.');
+        }
+        if (res.updateAvailable) {
+          setUpdateAvailable(true);
+          showToast(`OND v${res.latestVersion ?? 'new'} ready — click Update to install`);
+        } else {
+          showToast(`OND v${res.currentVersion} is up to date`);
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Could not check for updates.';
+        showToast(msg);
+      } finally {
+        setIsCheckingUpdate(false);
+      }
+      return;
+    }
 
     if (updateAvailable) {
       setIsApplyingUpdate(true);

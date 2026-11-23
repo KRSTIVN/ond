@@ -1,6 +1,8 @@
 # Dependencies & build output
 node_modules/
 dist/
+dist-electron/
+release/
 *.tsbuildinfo
 
 # Local personal data & spreadsheets (NEVER commit user content)

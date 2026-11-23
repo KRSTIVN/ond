@@ -1,0 +1,67 @@
+appId: com.ond.workspace
+productName: OND
+copyright: Copyright © 2026 KRSTIVN
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - build/icon.ico
+  - build/icon.png
+  - package.json
+
+asar: true
+
+publish:
+  - provider: github
+    owner: KRSTIVN
+    repo: ond
+    releaseType: release
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OND
+  deleteAppDataOnUninstall: false
+  artifactName: OND-Setup-${version}-${arch}.${ext}
+
+mac:
+  icon: build/icon.png
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  artifactName: OND-${version}-${arch}.${ext}
+
+dmg:
+  title: Install OND
+  contents:
+    - x: 130
+      y: 180
+      type: file
+    - x: 410
+      y: 180
+      type: link
+      path: /Applications
