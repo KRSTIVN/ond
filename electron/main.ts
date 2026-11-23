@@ -3,7 +3,9 @@ import {
   BrowserWindow,
   ipcMain,
   Menu,
+  session,
   shell,
+  type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
@@ -20,9 +22,24 @@ const RELEASES_URL = 'https://github.com/KRSTIVN/ond/releases/latest';
 const HOST = '127.0.0.1';
 const PREFERRED_PORTS = [5173, 45173, 0] as const;
 
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://accounts.google.com/gsi/client",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' https: data: blob:",
+  "connect-src 'self' https://accounts.google.com https://www.googleapis.com https://docs.google.com https://*.googleusercontent.com https://script.google.com https://script.googleusercontent.com",
+  'frame-src https://accounts.google.com',
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': CONTENT_SECURITY_POLICY,
 };
 
 const MIME_TYPES = new Map<string, string>([
@@ -141,11 +158,26 @@ function tryListen(server: http.Server, port: number): Promise<number> {
 
 async function startInternalStaticServer(): Promise<string> {
   const distDir = getDistDir();
+  const realDistDir = await fs.realpath(distDir).catch(() => distDir);
+  const realDistPrefix = `${realDistDir}${path.sep}`;
+  let activePort = 0;
+
+  const isAllowedHostHeader = (hostHeader: string | undefined): boolean => {
+    if (!hostHeader) return false;
+    const normalized = hostHeader.trim().toLowerCase();
+    return normalized === `127.0.0.1:${activePort}` || normalized === `localhost:${activePort}`;
+  };
 
   const server = http.createServer(async (req, res) => {
     const method = req.method ?? 'GET';
     const rawUrl = req.url ?? '/';
     const pathname = rawUrl.split('?')[0] ?? '/';
+
+    if (!isAllowedHostHeader(req.headers.host)) {
+      res.writeHead(403, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden Host');
+      return;
+    }
 
     if (pathname === '/api/health') {
       res.writeHead(200, {
@@ -178,8 +210,14 @@ async function startInternalStaticServer(): Promise<string> {
       const filePath = stat.isDirectory()
         ? path.join(resolved.filePath, 'index.html')
         : resolved.filePath;
-      const ext = path.extname(filePath).toLowerCase();
-      const content = await fs.readFile(filePath);
+      const realFilePath = await fs.realpath(filePath);
+      if (realFilePath !== realDistDir && !realFilePath.startsWith(realDistPrefix)) {
+        res.writeHead(403, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Forbidden');
+        return;
+      }
+      const ext = path.extname(realFilePath).toLowerCase();
+      const content = await fs.readFile(realFilePath);
       res.writeHead(200, {
         ...SECURITY_HEADERS,
         'Content-Type': MIME_TYPES.get(ext) ?? 'application/octet-stream',
@@ -188,7 +226,7 @@ async function startInternalStaticServer(): Promise<string> {
       res.end(method === 'HEAD' ? undefined : content);
     } catch {
       try {
-        const indexHtml = await fs.readFile(path.join(distDir, 'index.html'));
+        const indexHtml = await fs.readFile(path.join(realDistDir, 'index.html'));
         res.writeHead(200, {
           ...SECURITY_HEADERS,
           'Content-Type': 'text/html; charset=utf-8',
@@ -208,6 +246,7 @@ async function startInternalStaticServer(): Promise<string> {
   for (const candidatePort of PREFERRED_PORTS) {
     try {
       const boundPort = await tryListen(server, candidatePort);
+      activePort = boundPort;
       staticServer = server;
       return `http://${HOST}:${boundPort}`;
     } catch {
@@ -276,15 +315,36 @@ function configureAutoUpdater(): void {
   });
 }
 
-function registerIpcHandlers(): void {
-  ipcMain.handle('ond:get-version', () => app.getVersion());
+function isSameAppOrigin(rawUrl: string): boolean {
+  if (!serverUrl) return false;
+  try {
+    return new URL(rawUrl).origin === new URL(serverUrl).origin;
+  } catch {
+    return false;
+  }
+}
 
-  ipcMain.handle('ond:open-external', async (_event, url: unknown) => {
+function assertTrustedIpcSender(event: IpcMainInvokeEvent): void {
+  const senderUrl = event.senderFrame?.url ?? '';
+  if (!isSameAppOrigin(senderUrl)) {
+    throw new Error('Blocked IPC call from untrusted origin.');
+  }
+}
+
+function registerIpcHandlers(): void {
+  ipcMain.handle('ond:get-version', (event) => {
+    assertTrustedIpcSender(event);
+    return app.getVersion();
+  });
+
+  ipcMain.handle('ond:open-external', async (event, url: unknown) => {
+    assertTrustedIpcSender(event);
     if (typeof url !== 'string' || !isAllowedExternalUrl(url)) return;
     await shell.openExternal(url);
   });
 
-  ipcMain.handle('ond:check-for-updates', async (): Promise<DesktopUpdateCheckResult> => {
+  ipcMain.handle('ond:check-for-updates', async (event): Promise<DesktopUpdateCheckResult> => {
+    assertTrustedIpcSender(event);
     const currentVersion = app.getVersion();
     if (!app.isPackaged) {
       return {
@@ -318,7 +378,8 @@ function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('ond:install-update', async (): Promise<DesktopUpdateActionResult> => {
+  ipcMain.handle('ond:install-update', async (event): Promise<DesktopUpdateActionResult> => {
+    assertTrustedIpcSender(event);
     if (!app.isPackaged) {
       return { ok: false, error: 'Updates are only available in installed desktop builds.' };
     }
@@ -467,7 +528,7 @@ async function createMainWindow(): Promise<void> {
   });
 
   win.webContents.on('will-navigate', (event, targetUrl) => {
-    if (targetUrl.startsWith(serverUrl)) return;
+    if (isSameAppOrigin(targetUrl)) return;
     if (isGoogleAuthPopup(targetUrl)) return;
     event.preventDefault();
     if (isAllowedExternalUrl(targetUrl)) {
@@ -492,6 +553,10 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(async () => {
     app.setAppUserModelId('com.ond.workspace');
+    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+      const allowed = permission === 'clipboard-read' || permission === 'clipboard-sanitized-write';
+      callback(allowed);
+    });
     configureApplicationMenu();
     configureAutoUpdater();
     registerIpcHandlers();

@@ -14,10 +14,24 @@ const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT ?? 5173);
 const IS_WINDOWS = process.platform === 'win32';
 
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://accounts.google.com/gsi/client",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' https: data: blob:",
+  "connect-src 'self' https://accounts.google.com https://www.googleapis.com https://docs.google.com https://*.googleusercontent.com https://script.google.com https://script.googleusercontent.com",
+  'frame-src https://accounts.google.com',
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': CONTENT_SECURITY_POLICY,
 };
 
 const MIME_TYPES = new Map([
@@ -45,10 +59,30 @@ function sendJson(res, status, payload, method = 'GET') {
   res.end(method === 'HEAD' ? undefined : JSON.stringify(payload));
 }
 
-function isLocalOrigin(req) {
+function isAllowedHostHeader(req) {
+  const host = req.headers.host;
+  if (typeof host !== 'string') return false;
+  const normalized = host.trim().toLowerCase();
+  return normalized === `127.0.0.1:${PORT}` || normalized === `localhost:${PORT}`;
+}
+
+function isTrustedUpdateRequest(req) {
+  const secFetchSite = req.headers['sec-fetch-site'];
+  if (typeof secFetchSite === 'string' && secFetchSite !== 'same-origin' && secFetchSite !== 'none') {
+    return false;
+  }
+
   const origin = req.headers.origin;
-  if (!origin) return true;
-  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
+  if (typeof origin === 'string') {
+    if (origin === 'null') return false;
+    if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin)) {
+      return false;
+    }
+    return true;
+  }
+
+  // Non-browser local clients must include explicit custom header (browsers cannot forge cross-site without CORS)
+  return req.headers['x-ond-action'] === 'update';
 }
 
 async function runCmd(command, args, timeoutMs = 60_000) {
@@ -148,6 +182,12 @@ const server = http.createServer(async (req, res) => {
   const rawUrl = req.url ?? '/';
   const pathname = rawUrl.split('?')[0] ?? '/';
 
+  if (!isAllowedHostHeader(req)) {
+    res.writeHead(403, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Forbidden Host');
+    return;
+  }
+
   if (pathname === '/api/health') {
     if (method !== 'GET' && method !== 'HEAD') {
       res.writeHead(405, { ...SECURITY_HEADERS, Allow: 'GET, HEAD' });
@@ -175,7 +215,7 @@ const server = http.createServer(async (req, res) => {
       res.end('Method Not Allowed');
       return;
     }
-    if (!isLocalOrigin(req)) {
+    if (!isTrustedUpdateRequest(req)) {
       sendJson(res, 403, { ok: false, error: 'Cross-origin update blocked.' });
       return;
     }
@@ -207,8 +247,18 @@ const server = http.createServer(async (req, res) => {
   try {
     const stat = await fs.stat(resolved.filePath);
     const filePath = stat.isDirectory() ? path.join(resolved.filePath, 'index.html') : resolved.filePath;
-    const ext = path.extname(filePath).toLowerCase();
-    const content = await fs.readFile(filePath);
+    const [realDistDir, realFilePath] = await Promise.all([
+      fs.realpath(DIST_DIR),
+      fs.realpath(filePath),
+    ]);
+    const realDistPrefix = `${realDistDir}${path.sep}`;
+    if (realFilePath !== realDistDir && !realFilePath.startsWith(realDistPrefix)) {
+      res.writeHead(403, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden');
+      return;
+    }
+    const ext = path.extname(realFilePath).toLowerCase();
+    const content = await fs.readFile(realFilePath);
     res.writeHead(200, {
       ...SECURITY_HEADERS,
       'Content-Type': MIME_TYPES.get(ext) ?? 'application/octet-stream',

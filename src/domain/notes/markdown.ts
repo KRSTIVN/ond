@@ -56,7 +56,12 @@ function matchMarkdownLink(rest: string): { label: string; url: string; length: 
   };
 }
 
-export function parseInlineMarkdown(input: string): readonly InlineNode[] {
+const MAX_INLINE_DEPTH = 16;
+
+export function parseInlineMarkdown(input: string, depth = 0): readonly InlineNode[] {
+  if (depth >= MAX_INLINE_DEPTH) {
+    return input.length > 0 ? [{ type: 'text', text: input }] : [];
+  }
   const nodes: InlineNode[] = [];
   let cursor = 0;
 
@@ -84,21 +89,21 @@ export function parseInlineMarkdown(input: string): readonly InlineNode[] {
 
     const boldMatch = rest.match(/^\*\*(.+?)\*\*/);
     if (boldMatch) {
-      nodes.push({ type: 'bold', children: parseInlineMarkdown(boldMatch[1]!) });
+      nodes.push({ type: 'bold', children: parseInlineMarkdown(boldMatch[1]!, depth + 1) });
       cursor += boldMatch[0].length;
       continue;
     }
 
     const strikeMatch = rest.match(/^~~(.+?)~~/);
     if (strikeMatch) {
-      nodes.push({ type: 'strike', children: parseInlineMarkdown(strikeMatch[1]!) });
+      nodes.push({ type: 'strike', children: parseInlineMarkdown(strikeMatch[1]!, depth + 1) });
       cursor += strikeMatch[0].length;
       continue;
     }
 
     const italicMatch = rest.match(/^\*([^*]+?)\*/);
     if (italicMatch) {
-      nodes.push({ type: 'italic', children: parseInlineMarkdown(italicMatch[1]!) });
+      nodes.push({ type: 'italic', children: parseInlineMarkdown(italicMatch[1]!, depth + 1) });
       cursor += italicMatch[0].length;
       continue;
     }

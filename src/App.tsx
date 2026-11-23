@@ -343,7 +343,10 @@ export function App() {
       setIsApplyingUpdate(true);
       showToast('Pulling latest OND update & rebuilding...');
       try {
-        const res = await fetch('/api/update/apply', { method: 'POST' });
+        const res = await fetch('/api/update/apply', {
+          method: 'POST',
+          headers: { 'X-OND-Action': 'update' },
+        });
         const data = (await res.json()) as { ok?: boolean; updatedTo?: string; error?: string };
         if (!res.ok || !data.ok) {
           throw new Error(data.error ?? `HTTP ${res.status}`);
