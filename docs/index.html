@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070a14" />
+    <title>Download OND — Windows &amp; Mac Desktop App</title>
+    <meta
+      name="description"
+      content="Download OND for Windows or Mac in one click. Free, local-first desktop workspace for Kanban boards, Calendar, Notes, and Solar & Industry Calculator."
+    />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #050811;
+        --surface: rgba(16, 22, 38, 0.72);
+        --surface-strong: rgba(22, 30, 52, 0.86);
+        --border: rgba(226, 232, 240, 0.14);
+        --border-bright: rgba(129, 140, 248, 0.45);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #6366f1;
+        --accent-2: #38bdf8;
+        --radius: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        background:
+          radial-gradient(55% 40% at 22% 8%, rgba(99, 102, 241, 0.24), transparent 70%),
+          radial-gradient(50% 42% at 82% 16%, rgba(56, 189, 248, 0.2), transparent 70%),
+          radial-gradient(60% 50% at 50% 100%, rgba(20, 184, 166, 0.12), transparent 72%),
+          var(--bg);
+      }
+
+      .page {
+        width: min(980px, 100% - 2rem);
+        margin: 0 auto;
+        padding: 1.5rem 0 4rem;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 1.15rem;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        backdrop-filter: blur(20px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        text-decoration: none;
+        color: var(--text);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 800;
+        font-size: 1.05rem;
+        letter-spacing: -0.02em;
+      }
+
+      .nav-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .version-pill {
+        padding: 0.28rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, 0.18);
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        color: #c7d2fe;
+        font-weight: 600;
+        font-size: 0.78rem;
+      }
+
+      .nav-link {
+        color: var(--muted);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .nav-link:hover {
+        color: var(--text);
+      }
+
+      .hero {
+        text-align: center;
+        padding: 3.25rem 0 2.25rem;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        color: #bae6fd;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 1.1rem;
+      }
+
+      h1 {
+        margin: 0 auto 0.9rem;
+        max-width: 16ch;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: clamp(2.15rem, 5vw, 3.35rem);
+        line-height: 1.08;
+        letter-spacing: -0.035em;
+      }
+
+      .subtitle {
+        margin: 0 auto 2rem;
+        max-width: 56ch;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .download-panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        margin: 0 auto 2.5rem;
+      }
+
+      .primary-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        min-width: min(100%, 320px);
+        padding: 1.05rem 1.85rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: linear-gradient(135deg, #6366f1 0%, #3b82f6 52%, #0ea5e9 100%);
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 1.06rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        box-shadow:
+          0 18px 42px -12px rgba(56, 189, 248, 0.55),
+          inset 0 1px 1px rgba(255, 255, 255, 0.45);
+        transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+      }
+
+      .primary-cta:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.06);
+        box-shadow:
+          0 22px 48px -12px rgba(56, 189, 248, 0.68),
+          inset 0 1px 1px rgba(255, 255, 255, 0.55);
+      }
+
+      .primary-cta small {
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 500;
+        opacity: 0.88;
+      }
+
+      .cta-text {
+        text-align: left;
+        line-height: 1.25;
+      }
+
+      .alt-downloads {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.65rem;
+      }
+
+      .secondary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.62rem 1.05rem;
+        border-radius: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+        transition: border-color 140ms ease, background-color 140ms ease;
+      }
+
+      .secondary-btn:hover {
+        border-color: var(--border-bright);
+        background: var(--surface-strong);
+      }
+
+      .secondary-btn .hint {
+        color: var(--muted);
+        font-weight: 500;
+        font-size: 0.78rem;
+      }
+
+      .preview-card {
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+        margin-bottom: 2.25rem;
+      }
+
+      .preview-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .section-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.35rem;
+        letter-spacing: -0.02em;
+        margin: 0 0 1rem;
+        text-align: center;
+      }
+
+      .steps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .card {
+        padding: 1.25rem;
+        border-radius: 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        backdrop-filter: blur(18px);
+      }
+
+      .step-num {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: inline-grid;
+        place-items: center;
+        background: rgba(99, 102, 241, 0.22);
+        border: 1px solid rgba(129, 140, 248, 0.4);
+        color: #c7d2fe;
+        font-weight: 700;
+        font-size: 0.85rem;
+        margin-bottom: 0.7rem;
+      }
+
+      .card h3 {
+        margin: 0 0 0.4rem;
+        font-size: 1rem;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .first-open {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2.25rem;
+      }
+
+      .tip-badge {
+        display: inline-block;
+        padding: 0.22rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.14);
+        color: #e2e8f0;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+      }
+
+      .footer {
+        text-align: center;
+        font-size: 0.84rem;
+        color: var(--muted);
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .footer a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 600px) {
+        .nav-meta .nav-link {
+          display: none;
+        }
+        .hero {
+          padding-top: 2.25rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="nav">
+        <a class="brand" href="./">
+          <img src="./icon.svg" alt="OND Logo" width="28" height="28" />
+          <span>OND</span>
+        </a>
+        <div class="nav-meta">
+          <span class="version-pill" id="version-badge">v1.1.0</span>
+          <a class="nav-link" href="https://github.com/KRSTIVN/ond" target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="eyebrow">100% Free · Local &amp; Private · Windows &amp; Mac</div>
+        <h1>Download OND in one click</h1>
+        <p class="subtitle">
+          Your all-in-one desktop workspace for Kanban boards (Excel &amp; Google Sheets), Calendar,
+          Markdown Notes, and a 99-formula Calculator — including 25 Solar &amp; Renewable Energy
+          formulas. No account required.
+        </p>
+
+        <div class="download-panel">
+          <a
+            id="primary-download"
+            class="primary-cta"
+            href="https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-x64.exe"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span class="cta-text">
+              <span id="primary-label">Download OND for Windows</span>
+              <small id="primary-sub">Windows 10 / 11 (64-bit) · 1-Click Installer (.exe)</small>
+            </span>
+          </a>
+
+          <div class="alt-downloads" aria-label="Other platforms">
+            <a
+              id="win-x64-link"
+              class="secondary-btn"
+              href="https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-x64.exe"
+            >
+              <span>Windows</span>
+              <span class="hint">.exe (Standard PC)</span>
+            </a>
+            <a
+              id="mac-link"
+              class="secondary-btn"
+              href="https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-1.1.0-universal.dmg"
+            >
+              <span>Mac (M1–M4 &amp; Intel)</span>
+              <span class="hint">.dmg (Universal)</span>
+            </a>
+            <a
+              id="win-arm-link"
+              class="secondary-btn"
+              href="https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-arm64.exe"
+            >
+              <span>Windows ARM</span>
+              <span class="hint">.exe (Snapdragon)</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <figure class="preview-card" aria-label="OND Desktop Preview">
+        <img src="./demo.gif" alt="OND workspace showing frosted glass Kanban board, wallpapers, and tools" />
+      </figure>
+
+      <h2 class="section-title">How to install (takes 20 seconds)</h2>
+      <section class="steps-grid">
+        <article class="card">
+          <div class="step-num">1</div>
+          <h3>Click Download</h3>
+          <p>Click the blue download button above. Your computer will download one installer file.</p>
+        </article>
+        <article class="card">
+          <div class="step-num">2</div>
+          <h3>Double-click to install</h3>
+          <p>
+            <strong>Windows:</strong> Double-click the <code>.exe</code> file — it installs and opens automatically.<br />
+            <strong>Mac:</strong> Open the <code>.dmg</code> and drag <strong>OND</strong> into <strong>Applications</strong>.
+          </p>
+        </article>
+        <article class="card">
+          <div class="step-num">3</div>
+          <h3>Open anytime</h3>
+          <p>
+            Launch OND from your Desktop, Start Menu, or Mac Applications folder. Future updates happen inside the app with one click.
+          </p>
+        </article>
+      </section>
+
+      <h2 class="section-title">Seeing a security pop-up on first open?</h2>
+      <section class="first-open">
+        <article class="card">
+          <span class="tip-badge">Windows First-Time Tip</span>
+          <h3>"Windows protected your PC"</h3>
+          <p>
+            Because OND is a free independent open-source app, Windows may ask you to confirm the first time.
+            Click <strong>More info</strong> → <strong>Run anyway</strong>. You only need to do this once.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tip-badge">Mac First-Time Tip</span>
+          <h3>"Apple could not verify OND"</h3>
+          <p>
+            Open your <strong>Applications</strong> folder, <strong>right-click (or Control-click) OND</strong>,
+            and choose <strong>Open</strong> → <strong>Open</strong>. After that, it opens normally every time.
+          </p>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>
+          Open-source &amp; private — all your data stays on your device.
+          <a href="https://github.com/KRSTIVN/ond" target="_blank" rel="noopener noreferrer">View Source on GitHub</a>
+          ·
+          <a href="https://github.com/KRSTIVN/ond/releases" target="_blank" rel="noopener noreferrer">All Releases</a>
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var FALLBACK = {
+          version: 'v1.1.0',
+          winX64: 'https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-x64.exe',
+          winArm: 'https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-arm64.exe',
+          mac: 'https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-1.1.0-universal.dmg',
+        };
+
+        function detectPlatform() {
+          var ua = (navigator.userAgent || '').toLowerCase();
+          var plat = (navigator.platform || '').toLowerCase();
+          if (plat.indexOf('mac') !== -1 || ua.indexOf('macintosh') !== -1) return 'mac';
+          return 'win';
+        }
+
+        function applyLinks(links) {
+          var badge = document.getElementById('version-badge');
+          var primary = document.getElementById('primary-download');
+          var primaryLabel = document.getElementById('primary-label');
+          var primarySub = document.getElementById('primary-sub');
+          var winX64 = document.getElementById('win-x64-link');
+          var winArm = document.getElementById('win-arm-link');
+          var macLink = document.getElementById('mac-link');
+
+          if (badge) badge.textContent = links.version;
+          if (winX64) winX64.href = links.winX64;
+          if (winArm) winArm.href = links.winArm;
+          if (macLink) macLink.href = links.mac;
+
+          var os = detectPlatform();
+          if (os === 'mac') {
+            if (primary) primary.href = links.mac;
+            if (primaryLabel) primaryLabel.textContent = 'Download OND for Mac';
+            if (primarySub) primarySub.textContent = 'Apple Silicon (M1–M4) & Intel · Universal Installer (.dmg)';
+          } else {
+            if (primary) primary.href = links.winX64;
+            if (primaryLabel) primaryLabel.textContent = 'Download OND for Windows';
+            if (primarySub) primarySub.textContent = 'Windows 10 / 11 (64-bit) · 1-Click Installer (.exe)';
+          }
+        }
+
+        applyLinks(FALLBACK);
+
+        fetch('https://api.github.com/repos/KRSTIVN/ond/releases/latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+          .then(function (res) {
+            return res.ok ? res.json() : null;
+          })
+          .then(function (release) {
+            if (!release || !Array.isArray(release.assets)) return;
+            var findUrl = function (regex) {
+              for (var i = 0; i < release.assets.length; i += 1) {
+                var asset = release.assets[i];
+                if (asset && typeof asset.name === 'string' && regex.test(asset.name)) {
+                  if (typeof asset.browser_download_url === 'string' && asset.browser_download_url.indexOf('https://') === 0) {
+                    return asset.browser_download_url;
+                  }
+                }
+              }
+              return null;
+            };
+
+            applyLinks({
+              version: typeof release.tag_name === 'string' ? release.tag_name : FALLBACK.version,
+              winX64: findUrl(/-x64\.exe$/i) || FALLBACK.winX64,
+              winArm: findUrl(/-arm64\.exe$/i) || FALLBACK.winArm,
+              mac: findUrl(/-universal\.dmg$/i) || findUrl(/\.dmg$/i) || FALLBACK.mac,
+            });
+          })
+          .catch(function () {
+            // Keep instant fallback URLs
+          });
+      })();
+    </script>
+  </body>
+</html>

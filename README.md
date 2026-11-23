@@ -4,20 +4,31 @@
 
 # OND
 
-**A local-first, glassmorphic desktop workspace with custom wallpapers — combining customizable Google Sheets & Excel Kanban, Temporal Calendar, Markdown Notes, and a Scientific & Profession-Formula Calculator.**
+**Free, local-first desktop workspace for Windows & Mac — Kanban boards (Excel & Google Sheets), Calendar, Markdown Notes, and a 99-formula Solar & Industry Calculator.**
 
-[![React 19](https://img.shields.io/badge/React-19-0f172a?style=for-the-badge&logo=react&logoColor=38bdf8)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-0f172a?style=for-the-badge&logo=typescript&logoColor=818cf8)](https://www.typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-6-0f172a?style=for-the-badge&logo=vite&logoColor=fbbf24)](https://vite.dev)
-[![Windows & macOS](https://img.shields.io/badge/Download-Windows_.exe_%26_macOS_.dmg-0f172a?style=for-the-badge&logo=apple&logoColor=f8fafc)](https://github.com/KRSTIVN/ond/releases/latest)
-[![Excel & Sheets](https://img.shields.io/badge/Sync-Sheets_%26_Excel-0f172a?style=for-the-badge&logo=googlesheets&logoColor=34d399)](#spreadsheet-sync)
-[![License: MIT](https://img.shields.io/badge/License-MIT-0f172a?style=for-the-badge&logoColor=f8fafc)](LICENSE)
+<br />
+
+[![Download for Windows](https://img.shields.io/badge/⬇_Download_for_Windows-.exe_(64--bit)-2563eb?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-x64.exe)
+&nbsp;
+[![Download for Mac](https://img.shields.io/badge/⬇_Download_for_Mac-.dmg_(Apple_Silicon_%26_Intel)-111827?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-1.1.0-universal.dmg)
+
+**[🌐 Open the Simple Download Page](https://krstivn.github.io/ond/)** · [Windows ARM (.exe)](https://github.com/KRSTIVN/ond/releases/download/v1.1.0/OND-Setup-1.1.0-arm64.exe) · [All Releases](https://github.com/KRSTIVN/ond/releases/latest)
 
 <br />
 
 <img src="docs/demo.gif" alt="OND live demo — frosted glass Kanban columns, custom wallpapers, stage stepper, and Google Sheets / Excel connector" width="100%" />
 
 </div>
+
+---
+
+## Install in 20 Seconds (No Coding Required)
+
+1. **Click Download above** for **Windows** (`.exe`) or **Mac** (`.dmg`) — or use the **[Simple Download Page](https://krstivn.github.io/ond/)**.
+2. **Open the downloaded file:**
+   - **Windows:** Double-click `OND-Setup-1.1.0-x64.exe` — it installs automatically and adds OND to your Desktop & Start Menu. *(If Windows says "Windows protected your PC", click **More info → Run anyway**.)*
+   - **Mac:** Open `OND-1.1.0-universal.dmg` and drag **OND** into **Applications**. *(First launch: right-click **OND** in Applications → **Open**.)*
+3. **Done!** Future updates install right inside the app with one click.
 
 ---
 
@@ -59,7 +70,8 @@ flowchart LR
 
 ---
 
-## Quick Start
+<details>
+<summary><strong>For Developers: Run or Build From Source</strong></summary>
 
 ```bash
 git clone https://github.com/KRSTIVN/ond.git
@@ -69,28 +81,19 @@ npm run build
 npm start
 ```
 
-Open **`http://127.0.0.1:5173/`** and click **Sync & Backup** to connect your spreadsheet, Calendar, or Notes (or click **Try Sample** to preview with fictional demo cards).
+Open **`http://127.0.0.1:5173/`** or build native installers locally:
 
-## One-Click Desktop App (Windows & macOS)
-
-### Direct Click-to-Install (Recommended — No Node.js or Terminal Required)
-Download the latest native installer from **[GitHub Releases](https://github.com/KRSTIVN/ond/releases/latest)**:
-
-- **Windows (`.exe`)**: Download `OND-Setup-<version>-x64.exe` (or `arm64`) and double-click — installs silently in one click, creates Desktop & Start Menu shortcuts, and updates automatically in-app.
-- **macOS (`.dmg`)**: Download `OND-<version>-universal.dmg` (Apple Silicon + Intel), open it, and drag **OND** into **Applications**. *(First launch on unsigned builds: right-click `OND.app` → **Open**.)*
-
-### Developer / Local Script Mode
 ```powershell
-# Windows local shortcut
-npm run install:win
-
-# macOS local bundle
-npm run install:mac
-
-# Build native installers locally
+# Build native desktop installers
 npm run dist:win   # outputs release/OND-Setup-*.exe
 npm run dist:mac   # outputs release/OND-*-universal.dmg
+
+# Lightweight browser-window shortcuts (optional)
+npm run install:win
+npm run install:mac
 ```
+
+</details>
 
 ---
 
