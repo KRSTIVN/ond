@@ -52,10 +52,15 @@ function isLocalOrigin(req) {
 }
 
 async function runCmd(command, args, timeoutMs = 60_000) {
-  const { stdout } = await execFileAsync(command, args, {
+  const isWindowsBatch = IS_WINDOWS && /\.(cmd|bat)$/i.test(command);
+  const bin = isWindowsBatch ? (process.env.ComSpec || 'cmd.exe') : command;
+  const finalArgs = isWindowsBatch ? ['/d', '/s', '/c', command, ...args] : args;
+
+  const { stdout } = await execFileAsync(bin, finalArgs, {
     cwd: __dirname,
     timeout: timeoutMs,
     windowsHide: true,
+    maxBuffer: 10 * 1024 * 1024,
   });
   return stdout.trim();
 }
